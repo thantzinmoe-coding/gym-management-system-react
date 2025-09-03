@@ -1,4 +1,3 @@
-// /src/pages/admin/SendNotifications.tsx
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,13 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Send, Bell, Clock, Users } from "lucide-react";
+import { Send, Bell, Clock, Users, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNotifications, RecipientType, Notification } from "@/context/NotificationContext";
 
 export default function SendNotifications() {
   const { toast } = useToast();
-  const { notifications, addNotification } = useNotifications();
+  const { notifications, addNotification, deleteNotification } = useNotifications();
 
   const [notification, setNotification] = useState<{
     title: string;
@@ -30,7 +29,7 @@ export default function SendNotifications() {
       return;
     }
 
-    addNotification(notification as Omit<Notification, "id" | "sentAt">);
+    addNotification(notification as Omit<Notification, "id" | "sentAt" | "read">);
 
     toast({
       title: "Notification Sent",
@@ -38,6 +37,14 @@ export default function SendNotifications() {
     });
 
     setNotification({ title: "", message: "", recipient: "" });
+  };
+
+  const handleDeleteNotification = (id: number) => {
+    deleteNotification(id);
+    toast({
+      title: "Notification Deleted",
+      description: "The notification has been removed successfully.",
+    });
   };
 
   return (
@@ -105,33 +112,42 @@ export default function SendNotifications() {
         </Card>
 
         {/* Recent Notifications */}
-        <Card>
+        <Card className="bg-gray-800 border-2 border-gray-700">
           <CardHeader>
-            <CardTitle className="flex items-center">
-              <Bell className="h-5 w-5 mr-2" />
+            <CardTitle className="flex items-center text-white">
+              <Bell className="h-5 w-5 mr-2 text-white" />
               Recent Notifications
             </CardTitle>
-            <CardDescription>View recently sent notifications</CardDescription>
+            <CardDescription className="text-gray-300">View recently sent notifications</CardDescription>
           </CardHeader>
           <CardContent>
             {notifications.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No notifications sent yet.</p>
+              <p className="text-sm text-gray-300">No notifications sent yet.</p>
             ) : (
               <div className="space-y-4">
                 {notifications.map((notif) => (
-                  <div key={notif.id} className="p-4 bg-muted/50 rounded-lg">
-                    <h4 className="font-medium text-foreground">{notif.title}</h4>
-                    <p className="text-sm text-muted-foreground mb-3">{notif.message}</p>
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <div key={notif.id} className="p-4 bg-gray-600 border-2 border-gray-600 rounded-lg relative">
+                    <h4 className="font-medium text-white">{notif.title}</h4>
+                    <p className="text-sm text-gray-200 mb-3">{notif.message}</p>
+                    <div className="flex items-center justify-between text-xs text-gray-400">
                       <div className="flex items-center">
-                        <Users className="h-3 w-3 mr-1" />
+                        <Users className="h-3 w-3 mr-1 text-gray-400" />
                         {notif.recipient}
                       </div>
                       <div className="flex items-center">
-                        <Clock className="h-3 w-3 mr-1" />
+                        <Clock className="h-3 w-3 mr-1 text-gray-400" />
                         {notif.sentAt}
                       </div>
                     </div>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="absolute top-2 right-2 flex items-center gap-1"
+                      onClick={() => handleDeleteNotification(notif.id)}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                      Delete
+                    </Button>
                   </div>
                 ))}
               </div>

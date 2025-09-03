@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
+import React, { createContext, useContext, useState, ReactNode } from "react";
 
 export type RecipientType = "All Members" | "All Trainers";
 
@@ -14,6 +14,7 @@ export interface Notification {
 interface NotificationContextType {
   notifications: Notification[];
   addNotification: (notif: Omit<Notification, "id" | "sentAt" | "read">) => void;
+  deleteNotification: (id: number) => void;
   markAsRead: (id: number) => void;
   markAllAsRead: (recipient?: RecipientType) => void;
 }
@@ -22,18 +23,7 @@ const NotificationContext = createContext<NotificationContextType | undefined>(u
 
 export const NotificationProvider = ({ children }: { children: ReactNode }) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
-/*
-  // Load notifications from localStorage
-  useEffect(() => {
-    const stored = localStorage.getItem("notifications");
-    if (stored) setNotifications(JSON.parse(stored));
-  }, []);
 
-  // Save notifications to localStorage
-  useEffect(() => {
-    localStorage.setItem("notifications", JSON.stringify(notifications));
-  }, [notifications]);
-*/
   const addNotification = (notif: Omit<Notification, "id" | "sentAt" | "read">) => {
     const newNotif: Notification = {
       id: notifications.length + 1,
@@ -44,22 +34,28 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
     setNotifications([newNotif, ...notifications]);
   };
 
+  const deleteNotification = (id: number) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  };
+
   const markAsRead = (id: number) => {
-    setNotifications(prev =>
-      prev.map(n => (n.id === id ? { ...n, read: true } : n))
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
     );
   };
 
   const markAllAsRead = (recipient?: RecipientType) => {
-    setNotifications(prev =>
-      prev.map(n =>
+    setNotifications((prev) =>
+      prev.map((n) =>
         recipient ? (n.recipient === recipient ? { ...n, read: true } : n) : { ...n, read: true }
       )
     );
   };
 
   return (
-    <NotificationContext.Provider value={{ notifications, addNotification, markAsRead, markAllAsRead }}>
+    <NotificationContext.Provider
+      value={{ notifications, addNotification, deleteNotification, markAsRead, markAllAsRead }}
+    >
       {children}
     </NotificationContext.Provider>
   );

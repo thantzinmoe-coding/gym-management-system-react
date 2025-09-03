@@ -1,281 +1,294 @@
 import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Send, Clock, PlusCircle, MinusCircle } from 'lucide-react';
-
-interface Member {
-  id: string;
-  name: string;
-}
+import { Search, Send, MessageCircle, User, Clock } from 'lucide-react';
 
 interface Message {
   id: string;
+  senderId: string;
   senderName: string;
   content: string;
   timestamp: string;
+  isFromTrainer: boolean;
 }
 
-interface Group {
+interface ChatMember {
   id: string;
   name: string;
-  members: Member[];
-  messages: Message[];
+  avatar?: string;
+  lastMessage: string;
+  lastMessageTime: string;
+  unreadCount: number;
+  isOnline: boolean;
 }
 
-const mockMembers: Member[] = [
-  { id: '1', name: 'John Doe' },
-  { id: '2', name: 'Jane Smith' },
-  { id: '3', name: 'Mike Johnson' },
-  { id: '4', name: 'Sarah Wilson' },
-  { id: '5', name: 'David Lee' },
+const mockMembers: ChatMember[] = [
+  {
+    id: '1',
+    name: 'John Doe',
+    lastMessage: 'Thanks for the workout plan!',
+    lastMessageTime: '10:30 AM',
+    unreadCount: 2,
+    isOnline: true
+  },
+  {
+    id: '2',
+    name: 'Jane Smith',
+    lastMessage: 'Can we reschedule tomorrow\'s session?',
+    lastMessageTime: '9:45 AM',
+    unreadCount: 1,
+    isOnline: false
+  },
+  {
+    id: '3',
+    name: 'Mike Johnson',
+    lastMessage: 'Great session today!',
+    lastMessageTime: 'Yesterday',
+    unreadCount: 0,
+    isOnline: true
+  },
+  {
+    id: '4',
+    name: 'Sarah Wilson',
+    lastMessage: 'What should I eat post-workout?',
+    lastMessageTime: 'Yesterday',
+    unreadCount: 3,
+    isOnline: false
+  }
 ];
 
-export default function GroupChatPage() {
-  const [groups, setGroups] = useState<Group[]>([]);
-  const [newGroupName, setNewGroupName] = useState('');
-  const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
+const mockMessages: Message[] = [
+  {
+    id: '1',
+    senderId: '1',
+    senderName: 'John Doe',
+    content: 'Hi! I have a question about the workout routine.',
+    timestamp: '10:25 AM',
+    isFromTrainer: false
+  },
+  {
+    id: '2',
+    senderId: 'trainer',
+    senderName: 'You',
+    content: 'Sure! What would you like to know?',
+    timestamp: '10:26 AM',
+    isFromTrainer: true
+  },
+  {
+    id: '3',
+    senderId: '1',
+    senderName: 'John Doe',
+    content: 'How many sets should I do for the bench press?',
+    timestamp: '10:28 AM',
+    isFromTrainer: false
+  },
+  {
+    id: '4',
+    senderId: 'trainer',
+    senderName: 'You',
+    content: 'Start with 3 sets of 8-10 reps. Focus on proper form rather than heavy weight initially.',
+    timestamp: '10:29 AM',
+    isFromTrainer: true
+  },
+  {
+    id: '5',
+    senderId: '1',
+    senderName: 'John Doe',
+    content: 'Thanks for the workout plan!',
+    timestamp: '10:30 AM',
+    isFromTrainer: false
+  }
+];
+
+export default function ChatWithMembers() {
+  const [selectedMember, setSelectedMember] = useState<ChatMember | null>(mockMembers[0]);
+  const [messages, setMessages] = useState<Message[]>(mockMessages);
   const [newMessage, setNewMessage] = useState('');
-  const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
-  // show/hide create form
-  const [showCreateForm, setShowCreateForm] = useState(false);
+  const filteredMembers = mockMembers.filter(member =>
+    member.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-  // manage members popup
-  const [showMemberEditor, setShowMemberEditor] = useState(false);
+  const handleSendMessage = () => {
+    if (!newMessage.trim() || !selectedMember) return;
 
-  // === CREATE GROUP ===
-  const handleCreateGroup = () => {
-    if (!newGroupName || selectedMembers.length === 0) return;
-
-    const group: Group = {
+    const message: Message = {
       id: Date.now().toString(),
-      name: newGroupName,
-      members: mockMembers.filter((m) => selectedMembers.includes(m.id)),
-      messages: [],
+      senderId: 'trainer',
+      senderName: 'You',
+      content: newMessage,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      isFromTrainer: true
     };
 
-    setGroups([...groups, group]);
-    setNewGroupName('');
-    setSelectedMembers([]);
-    setActiveGroupId(group.id);
-    setShowCreateForm(false);
-  };
-
-  // === SEND MESSAGE ===
-  const handleSendMessage = () => {
-    if (!newMessage.trim() || !activeGroupId) return;
-
-    setGroups(groups.map((g) => {
-      if (g.id === activeGroupId) {
-        return {
-          ...g,
-          messages: [
-            ...g.messages,
-            {
-              id: Date.now().toString(),
-              senderName: 'You',
-              content: newMessage,
-              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            },
-          ],
-        };
-      }
-      return g;
-    }));
-
+    setMessages([...messages, message]);
     setNewMessage('');
   };
 
-  // === ADD MEMBER ===
-  const handleAddMember = (memberId: string) => {
-    setGroups(groups.map((g) => {
-      if (g.id === activeGroupId) {
-        const memberToAdd = mockMembers.find((m) => m.id === memberId);
-        if (memberToAdd && !g.members.some((m) => m.id === memberId)) {
-          return { ...g, members: [...g.members, memberToAdd] };
-        }
-      }
-      return g;
-    }));
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSendMessage();
+    }
   };
-
-  // === REMOVE MEMBER ===
-  const handleRemoveMember = (memberId: string) => {
-    setGroups(groups.map((g) => {
-      if (g.id === activeGroupId) {
-        return { ...g, members: g.members.filter((m) => m.id !== memberId) };
-      }
-      return g;
-    }));
-  };
-
-  const activeGroup = groups.find((g) => g.id === activeGroupId);
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Group Chat</h1>
-          <p className="text-muted-foreground">Trainers can create chats and add members</p>
-        </div>
-        <Button onClick={() => setShowCreateForm(true)}>+ Create Chat</Button>
+      <div>
+        <h1 className="text-3xl font-bold text-black">Chat with Members</h1>
+        <p className="text-black">Communicate with your training clients</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-[600px]">
-        {/* === GROUP LIST PANEL === */}
-        <Card className="lg:col-span-1 overflow-y-auto">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[600px]">
+        {/* Members List */}
+        <Card className="lg:col-span-1">
           <CardHeader>
-            <CardTitle>Groups</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {groups.map((g) => (
-              <div
-                key={g.id}
-                className={`p-2 cursor-pointer border-b border-border hover:bg-muted/50 ${activeGroupId === g.id ? 'bg-muted' : ''}`}
-                onClick={() => setActiveGroupId(g.id)}
-              >
-                <div className="flex justify-between items-center">
-                  <span>{g.name}</span>
-                  <Badge>{g.members.length}</Badge>
-                </div>
-                <div className="text-xs text-muted-foreground truncate">
-                  Members: {g.members.map((m) => m.name).join(', ')}
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        {/* === CHAT AREA PANEL === */}
-        <Card className="lg:col-span-3 flex flex-col">
-          <CardHeader>
-            <div className="flex justify-between items-center">
-              <div>
-                <CardTitle>{activeGroup?.name || 'Select a group'}</CardTitle>
-                <CardDescription>
-                  {activeGroup ? `Members: ${activeGroup.members.map((m) => m.name).join(', ')}` : ''}
-                </CardDescription>
-              </div>
-              {activeGroup && (
-                <Button variant="outline" size="sm" onClick={() => setShowMemberEditor(!showMemberEditor)}>
-                  Manage Members
-                </Button>
-              )}
+            <CardTitle className="flex items-center text-black">
+              <MessageCircle className="h-5 w-5 mr-2 text-black" />
+              Members
+            </CardTitle>
+            <div className="flex items-center space-x-2">
+              <Search className="h-4 w-4 text-black" />
+              <Input
+                placeholder="Search members..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="h-8 text-black"
+              />
             </div>
           </CardHeader>
-
-          <CardContent className="flex-1 flex flex-col justify-between">
-            {/* === CHAT MESSAGES === */}
-            <div className="flex-1 overflow-y-auto space-y-2 p-2">
-              {activeGroup?.messages.map((msg) => (
-                <div key={msg.id} className="flex justify-start">
-                  <div className="max-w-[70%] p-2 rounded-lg bg-muted text-foreground">
-                    <p>{msg.content}</p>
-                    <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                      <span>{msg.senderName}</span>
-                      <span className="flex items-center">
-                        <Clock className="h-3 w-3 mr-1" /> {msg.timestamp}
+          <CardContent className="p-0">
+            <div className="space-y-1">
+              {filteredMembers.map((member) => (
+                <div
+                  key={member.id}
+                  className={`p-3 cursor-pointer border-b border-white hover:bg-blue-100 ${
+                    selectedMember?.id === member.id ? 'bg-blue-200' : 'bg-white'
+                  }`}
+                  onClick={() => setSelectedMember(member)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="relative">
+                        <div className="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-medium">
+                          {member.name.charAt(0)}
+                        </div>
+                        {member.isOnline && (
+                          <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-black truncate">
+                          {member.name}
+                        </p>
+                        <p className="text-xs text-black truncate">
+                          {member.lastMessage}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end space-y-1">
+                      <span className="text-xs text-black">
+                        {member.lastMessageTime}
                       </span>
+                      {member.unreadCount > 0 && (
+                        <Badge variant="destructive" className="text-xs bg-blue-500">
+                          {member.unreadCount}
+                        </Badge>
+                      )}
                     </div>
                   </div>
                 </div>
               ))}
             </div>
-
-            {/* === SEND MESSAGE === */}
-            {activeGroup && (
-              <div className="flex space-x-2 mt-2 border-t border-border pt-2">
-                <Input
-                  placeholder="Type your message..."
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  className="flex-1"
-                />
-                <Button onClick={handleSendMessage}>
-                  <Send className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
           </CardContent>
+        </Card>
+
+        {/* Chat Area */}
+        <Card className="lg:col-span-2">
+          {selectedMember ? (
+            <>
+              <CardHeader className="border-b border-white bg-blue-100">
+                <div className="flex items-center space-x-3">
+                  <div className="relative">
+                    <div className="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-medium">
+                      {selectedMember.name.charAt(0)}
+                    </div>
+                    {selectedMember.isOnline && (
+                      <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
+                    )}
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg text-black">{selectedMember.name}</CardTitle>
+                    <CardDescription className="text-black">
+                      {selectedMember.isOnline ? 'Online' : 'Offline'}
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              
+              <CardContent className="flex flex-col h-[400px] bg-white">
+                {/* Messages */}
+                <div className="flex-1 overflow-y-auto space-y-4 p-4">
+                  {messages.map((message) => (
+                    <div
+                      key={message.id}
+                      className={`flex ${message.isFromTrainer ? 'justify-end' : 'justify-start'}`}
+                    >
+                      <div
+                        className={`max-w-[70%] p-3 rounded-lg ${
+                          message.isFromTrainer
+                            ? 'bg-blue-500 text-white'
+                            : 'bg-blue-100 text-black'
+                        }`}
+                      >
+                        <p className="text-sm">{message.content}</p>
+                        <div className="flex items-center justify-between mt-1">
+                          <span className={`text-xs ${
+                            message.isFromTrainer ? 'text-white/70' : 'text-black'
+                          }`}>
+                            {message.senderName}
+                          </span>
+                          <span className={`text-xs ${
+                            message.isFromTrainer ? 'text-white/70' : 'text-black'
+                          }`}>
+                            <Clock className="h-3 w-3 inline mr-1" />
+                            {message.timestamp}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Message Input */}
+                <div className="border-t border-white pt-4">
+                  <div className="flex space-x-2">
+                    <Input
+                      placeholder="Type your message..."
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      onKeyPress={handleKeyPress}
+                      className="flex-1 text-black"
+                    />
+                    <Button onClick={handleSendMessage} disabled={!newMessage.trim()} className="bg-blue-500">
+                      <Send className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </>
+          ) : (
+            <div className="flex items-center justify-center h-full bg-white">
+              <div className="text-center">
+                <User className="h-12 w-12 text-black mx-auto mb-4" />
+                <p className="text-black">Select a member to start chatting</p>
+              </div>
+            </div>
+          )}
         </Card>
       </div>
-
-      {/* === CREATE GROUP POPUP === */}
-      {showCreateForm && (
-        <Card className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 shadow-xl border-2 border-border z-50">
-          <CardHeader>
-            <CardTitle>Create New Group</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Input
-              placeholder="Group Name"
-              value={newGroupName}
-              onChange={(e) => setNewGroupName(e.target.value)}
-            />
-
-            <div className="space-y-1 max-h-40 overflow-y-auto border p-2 rounded">
-              {mockMembers.map((m) => (
-                <div key={m.id} className="flex items-center space-x-2">
-                  <Checkbox
-                    checked={selectedMembers.includes(m.id)}
-                    onCheckedChange={(checked) => {
-                      if (checked) {
-                        setSelectedMembers([...selectedMembers, m.id]);
-                      } else {
-                        setSelectedMembers(selectedMembers.filter((id) => id !== m.id));
-                      }
-                    }}
-                  />
-                  <span>{m.name}</span>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => setShowCreateForm(false)}>Cancel</Button>
-              <Button onClick={handleCreateGroup}>Create</Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* === MEMBER MANAGEMENT POPUP === */}
-      {showMemberEditor && activeGroup && (
-        <Card className="fixed bottom-4 right-4 w-96 shadow-xl border-2 border-border z-40">
-          <CardHeader>
-            <CardTitle>Manage Members</CardTitle>
-            <CardDescription>{activeGroup.name}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2 max-h-60 overflow-y-auto">
-            {/* Existing Members */}
-            <h4 className="text-sm font-semibold">Current Members</h4>
-            {activeGroup.members.map((m) => (
-              <div key={m.id} className="flex justify-between items-center p-1 border rounded">
-                <span>{m.name}</span>
-                <Button size="icon" variant="destructive" onClick={() => handleRemoveMember(m.id)}>
-                  <MinusCircle className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
-
-            {/* Add New Members */}
-            <h4 className="text-sm font-semibold mt-3">Add Members</h4>
-            {mockMembers
-              .filter((m) => !activeGroup.members.some((mem) => mem.id === m.id))
-              .map((m) => (
-                <div key={m.id} className="flex justify-between items-center p-1 border rounded">
-                  <span>{m.name}</span>
-                  <Button size="icon" onClick={() => handleAddMember(m.id)}>
-                    <PlusCircle className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }
