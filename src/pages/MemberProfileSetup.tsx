@@ -98,7 +98,7 @@ export default function MemberProfileSetup() {
         });
       }
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Create profile error:", error);
       toast({
         title: "Error",

@@ -1,43 +1,118 @@
-import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { useState, useEffect } from 'react';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle, CardDescription
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle
+} from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem
+} from '@/components/ui/select';
 import { Edit } from 'lucide-react';
-import { useTrainers } from '@/context/TrainerContext';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
+import { trainerService } from '@/services/trainerService';
+
+interface TrainerResponseDto {
+  id: number;
+  name: string;
+  email: string;
+  phone: string;
+  status: string; // Changed to string
+  specialization: string[];
+  experience: number;
+  profilePhoto?: string;
+}
 
 export default function ManageTrainers() {
-  const { trainers, updateTrainer } = useTrainers();
+  const [trainers, setTrainers] = useState<TrainerResponseDto[]>([]);
   const { toast } = useToast();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [editingTrainer, setEditingTrainer] = useState<any>(null);
+  const [editingTrainer, setEditingTrainer] = useState<TrainerResponseDto | null>(null);
+
+  useEffect(() => {
+    const fetchTrainers = async () => {
+      try {
+        const data = await trainerService.getAllTrainers();
+        if (data && data.data) {
+          setTrainers(data.data);
+        } else {
+          console.error("Unexpected data structure:", data);
+          toast({
+            title: "Error fetching trainers",
+            description: "Unexpected data format from the server.",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error("Failed to fetch trainers:", error);
+        toast({
+          title: "Error fetching trainers",
+          description: "Failed to connect to the server.",
+          variant: "destructive",
+        });
+      }
+    };
+
+    fetchTrainers();
+  }, [toast]);
 
   // Open edit dialog for a trainer
-  const handleEditTrainer = (trainer: any) => {
-    setEditingTrainer({ id: trainer.id, status: trainer.status });
+  const handleEditTrainer = (trainer: TrainerResponseDto) => {
+    setEditingTrainer(trainer);
     setIsEditDialogOpen(true);
   };
 
   // Update trainer status
-  const handleUpdateTrainer = () => {
-    if (editingTrainer?.status) {
-      updateTrainer(editingTrainer.id, { status: editingTrainer.status });
-      toast({ title: "Trainer Updated", description: "Trainer status updated successfully." });
-      setIsEditDialogOpen(false);
-      setEditingTrainer(null);
+  const handleUpdateTrainer = async () => {
+    if (editingTrainer) {
+      try {
+        // Ensure status is a string
+        await trainerService.updateTrainerStatus(editingTrainer.id, editingTrainer.status);
+
+        // Update local state
+        setTrainers((prevTrainers) =>
+          prevTrainers.map((trainer) =>
+            trainer.id === editingTrainer.id ? { ...trainer, status: editingTrainer.status } : trainer
+          )
+        );
+
+        toast({
+          title: "Trainer Updated",
+          description: "Trainer status updated successfully.",
+        });
+        setIsEditDialogOpen(false);
+        setEditingTrainer(null);
+      } catch (error) {
+        console.error("Error updating trainer status:", error);
+        toast({
+          title: "Error updating trainer",
+          description: "Failed to update trainer status.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
   // Status badge component
   const getStatusBadge = (status: string) => {
     const colors: Record<string, string> = {
-      Active: 'bg-green-100 text-green-800',
-      Inactive: 'bg-gray-100 text-gray-800',
-      Expired: 'bg-red-100 text-red-800'
+      ACTIVE: 'bg-green-100 text-green-800',
+      INACTIVE: 'bg-gray-100 text-gray-800',
+      EXPIRED: 'bg-red-100 text-red-800'
     };
     return <Badge className={`px-2 py-1 rounded ${colors[status] || 'bg-gray-100 text-gray-800'}`}>{status}</Badge>;
   };
@@ -66,7 +141,7 @@ export default function ManageTrainers() {
             <CardTitle>Active Trainers</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-black">{trainers.filter(t => t.status === 'Active').length}</p>
+            <p className="text-3xl font-bold text-black">{trainers.filter(t => t.status === 'ACTIVE').length}</p>
           </CardContent>
         </Card>
       </div>
@@ -131,9 +206,8 @@ export default function ManageTrainers() {
                 <Select value={editingTrainer.status} onValueChange={value => setEditingTrainer({ ...editingTrainer, status: value })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Active">Active</SelectItem>
-                    <SelectItem value="Inactive">Inactive</SelectItem>
-                    <SelectItem value="Expired">Expired</SelectItem>
+                    <SelectItem value="ACTIVE">Active</SelectItem>
+                    <SelectItem value="INACTIVE">Inactive</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
