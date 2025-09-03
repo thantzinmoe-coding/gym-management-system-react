@@ -90,7 +90,7 @@ api.interceptors.response.use(
           }
 
           const response = await axios.post(
-            `${API_BASE_URL}/api/v1/auth/users/getRefreshToken`,
+            `${API_BASE_URL}api/v1/auth/users/getRefreshToken`,
             {},
             {
               headers: {
@@ -124,7 +124,7 @@ api.interceptors.response.use(
           Cookies.remove('user');
           
           // Redirect to auth page
-          window.location.href = '/auth';
+          window.location.href = '/login';
           return Promise.reject(err);
         }
       }

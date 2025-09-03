@@ -62,8 +62,8 @@ export default function TrainerProfileSetup() {
 
       // 4️⃣ Prepare additional user details (weight, height, goals)
       const userDetailForm = {
-        weight: profile.experience,
-        height: profile.specialization,
+        experience: profile.experience,
+        specialization: profile.specialization,
         entityId: profile.userId
       };
 
