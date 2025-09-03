@@ -2,15 +2,12 @@ import axios, { AxiosError, type AxiosRequestConfig, type AxiosResponse } from '
 import Cookies from 'js-cookie';
 
 // Base URL for your Spring Boot backend
-const API_BASE_URL = 'http://localhost:8080/';
+const API_BASE_URL = 'http://localhost:8080';
 
 // Create axios instance
 const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 30000, // Add timeout
-  headers: {
-    'Content-Type': 'application/json',
-  },
   withCredentials: true, // Required for CORS
 });
 

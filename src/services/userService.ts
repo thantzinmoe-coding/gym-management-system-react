@@ -53,9 +53,16 @@ export const userService = {
     },
 
     // Update user profile
-    updateProfile: async (profileData) => {
+    updateProfile: async (profileData, userId) => {
         try {
-            const response = await api.put('/users/profile', profileData);
+            const response = await api.post(`${profileUrl}/${userId}/update`, {
+                name: profileData.name,
+                nrc: profileData.nrc,
+                dob: profileData.dateOfBirth,
+                gender: profileData.gender,
+                phone: profileData.phone,
+                address: profileData.address
+            });
             return response.data;
         } catch (error) {
             console.error('Update profile error:', error);
@@ -73,26 +80,33 @@ export const userService = {
             throw error.response?.data || { message: 'Failed to fetch user details' };
         }
     },
-    // Get user statistics by ID
-    getUserStats: async (userId) => {
+
+    // Update user details
+    updateUserDetails: async (userId, detailsData) => {
         try {
-            const response = await api.get(`/users/${userId}/stats`);
+            const response = await api.put(`/api/v1/auth/user-detail-info/${userId}`, {
+                weight: detailsData.weight || 0,
+                height: detailsData.height || 0,
+                goal: detailsData.goal || '',
+                specialization: detailsData.specialization || '',
+                experience: detailsData.experience || '',
+            });
             return response.data;
         } catch (error) {
-            console.error('Get user stats error:', error);
-            throw error.response?.data || { message: 'Failed to fetch user stats' };
+            console.error('Update user details error:', error);
+            throw error.response?.data || { message: 'Failed to update user details' };
         }
     },
 
     // ==================== MEDIA MANAGEMENT ====================
 
     // Upload avatar
-    uploadAvatar: async (file) => {
+    uploadAvatar: async (file, userId) => {
         try {
             const formData = new FormData();
             formData.append('file', file);
 
-            const response = await api.post('/users/profile/avatar', formData, {
+            const response = await api.post(`${profileUrl}/${userId}/profile-picture`, formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                 },
@@ -102,5 +116,17 @@ export const userService = {
             console.error('Upload avatar error:', error);
             throw error.response?.data || { message: 'Failed to upload avatar' };
         }
-    }
+    },
+
+    uploadProfilePicture: async (userId: number, file: File) => {
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const response = await api.post(
+            `${profileUrl}/${userId}/profile-picture`,
+            formData
+        );
+
+        return response.data; // should contain { url: "uploadedFileUrl" }
+    },
 };

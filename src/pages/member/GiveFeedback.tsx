@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Star, MessageSquare, Send, ThumbsUp, Calendar } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useTrainers, Trainer } from '@/context/TrainerContext';
+import { feedbackService } from '@/services/feedbackService';
 
 interface FeedbackHistory {
   id: string;
@@ -41,13 +42,25 @@ export default function GiveFeedback() {
     </div>
   );
 
-  const handleSubmitFeedback = () => {
+  const handleSubmitFeedback = async (e) => {
+    e.preventDefault();
     if (!selectedTrainer || !rating || !feedback.trim()) {
       toast({
         title: "Missing Information",
         description: "Please fill in all required fields.",
         variant: "destructive",
       });
+
+      try {
+        const response = await feedbackService.giveFeedback({
+          trainerName: selectedTrainer,
+          rating,
+          feedback
+        });
+        console.log('Feedback submission response:', response.message);
+      } catch {
+
+      }
       return;
     }
 

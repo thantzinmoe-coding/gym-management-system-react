@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,50 +7,136 @@ import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { User } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { userService } from '@/services/userService';
+import { authService } from '@/services/authService';
+import Cookies from 'js-cookie';
 
 export default function ManageTrainerProfile() {
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
+  const user = authService.getCurrentUser();
+  const [profilePhotoUrl, setProfilePhotoUrl] = useState<string>();
 
   const [profile, setProfile] = useState({
-    name: 'Alex Smith',
-    email: 'alex.smith@gym.com',
-    phone: '+9876543210',
-    dateOfBirth: '1985-08-10',
-    gender: 'Male',
-    address: '456 Fitness Ave, City, State 67890',
-    specialization: 'Strength Training, Weight Loss, Nutrition',
-    experience: '10 years',
+    name: '',
+    email: '',
+    phone: '',
+    dateOfBirth: '',
+    gender: '',
+    address: '',
+    specialization: '',
+    experience: '',
     profilePhoto: ''
   });
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const userProfile = await userService.getUserProfile(user.id);
+        if (userProfile) {
+          setProfile(prev => ({
+            ...prev,
+            name: userProfile.name || '',
+            email: user.email || '',
+            phone: userProfile.phone || '',
+            dateOfBirth: userProfile.dob || '',
+            gender: userProfile.gender || '',
+            address: userProfile.address || '',
+            profilePhoto: userProfile.profilePic || ''
+          }));
+
+          if (userProfile.profilePic) {
+            const token = Cookies.get('token'); // make sure you have this
+            const response = await fetch(`${userProfile.profilePic}`, {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            });
+            if (response.ok) {
+              const blob = await response.blob();
+              setProfilePhotoUrl(URL.createObjectURL(blob));
+            }
+          }
+        }
+
+        const userDetails = await userService.getUserDetails(user.id);
+        if (userDetails) {
+          setProfile(prev => ({
+            ...prev,
+            experience: userDetails.experience || '',
+            specialization: userDetails.specialization || ''
+          }));
+        }
+      } catch (error) {
+        console.error('Error loading profile:', error);
+      }
+    };
+
+    console.log('Fetching profile picture:', profile.profilePhoto);
+
+    fetchProfile();
+  }, [user.id]);
 
   const handleInputChange = (field: string, value: string) => {
     setProfile(prev => ({ ...prev, [field]: value }));
   };
 
-  const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const photoUrl = e.target?.result as string;
-        setProfile(prev => ({ ...prev, profilePhoto: photoUrl }));
-        toast({
-          title: "Photo Updated",
-          description: "Your profile photo has been updated successfully.",
-        });
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+
+    try {
+      // Upload file to backend
+      const result = await userService.uploadProfilePicture(user.id, file);
+
+      // The backend returns the URL of the uploaded image
+      if (result.url) {
+        setProfile(prev => ({ ...prev, profilePhoto: result.url }));
+        setProfilePhotoUrl(result.url); // directly set preview to server-hosted image
+      }
+
+      toast({
+        title: "Photo Updated",
+        description: "Your profile photo has been uploaded successfully.",
+      });
+    } catch (error) {
+      console.error("Error uploading photo:", error);
+      toast({
+        title: "Upload Failed",
+        description: "Could not upload profile photo. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+
+  // ✅ Save Profile
+  const handleSaveProfile = async () => {
+    try {
+      const response = await userService.updateProfile(profile, user.id);
+
+      await userService.updateUserDetails(user.id, {
+        experience: profile.experience,
+        specialization: profile.specialization,
+      });
+
+      toast({
+        title: "Profile Updated",
+        description: "Your profile has been updated successfully.",
+      });
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      toast({
+        title: "Update Failed",
+        description: "There was a problem updating your profile. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
   const handleToggleEdit = () => {
     if (isEditing) {
-      // Save changes
-      toast({
-        title: "Profile Updated",
-        description: "Your trainer profile has been updated successfully.",
-      });
+      handleSaveProfile();
     }
     setIsEditing(!isEditing);
   };
@@ -80,7 +166,7 @@ export default function ManageTrainerProfile() {
             {/* Avatar */}
             <div className="flex items-center space-x-4 mb-6">
               <Avatar className="h-20 w-20">
-                <AvatarImage src={profile.profilePhoto || "/placeholder-avatar.jpg"} />
+                <AvatarImage src={profilePhotoUrl || "/placeholder-avatar.jpg"} />
                 <AvatarFallback className="text-lg">{profile.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
               </Avatar>
               {isEditing && (
