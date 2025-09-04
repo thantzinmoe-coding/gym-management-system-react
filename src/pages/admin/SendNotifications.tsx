@@ -18,11 +18,10 @@ export default function SendNotifications() {
   const [notification, setNotification] = useState<{
     title: string;
     message: string;
-    role: string;
-  }>({ title: "", message: "", role: "" });
+  }>({ title: "", message: "" });
 
   const handleSendNotification = async () => {
-    if (!notification.title || !notification.message || !notification.role) {
+    if (!notification.title || !notification.message) {
       toast({
         title: "Missing Information",
         description: "Please fill all fields.",
@@ -35,10 +34,10 @@ export default function SendNotifications() {
       await notificationService.sendNotification(notification);
       toast({
         title: "Notification Sent",
-        description: `Notification sent to ${notification.role}`,
+        description: 'Notification sent to all users.',
       });
 
-      setNotification({ title: "", message: "", role: "" });
+      setNotification({ title: "", message: "" });
     } catch (error: any) {
       toast({
         title: "Failed to Send",
@@ -87,24 +86,6 @@ export default function SendNotifications() {
               />
             </div>
 
-            <div>
-              <Label htmlFor="role">Send To</Label>
-              <Select
-                value={notification.role}
-                onValueChange={(value) =>
-                  setNotification({ ...notification, role: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select recipients" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">All Members</SelectItem>
-                  <SelectItem value="MEMBER">All Members</SelectItem>
-                  <SelectItem value="TRAINER">All Trainers</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
 
             <Button onClick={handleSendNotification} className="w-full">
               <Send className="h-4 w-4 mr-2" />
@@ -130,15 +111,14 @@ export default function SendNotifications() {
                 {notifications.map((notif) => (
                   <div key={notif.id} className="p-4 bg-muted/50 rounded-lg">
                     <h4 className="font-medium text-foreground">{notif.title}</h4>
-                    <p className="text-sm text-muted-foreground mb-3">{notif.message}</p>
+                    <p className="text-sm text-muted-foreground mb-3">{notif.content}</p>
                     <div className="flex items-center justify-between text-xs text-muted-foreground">
                       <div className="flex items-center">
-                        <Users className="h-3 w-3 mr-1" />
-                        {notif.recipient}
-                      </div>
-                      <div className="flex items-center">
                         <Clock className="h-3 w-3 mr-1" />
-                        {notif.sentAt}
+                        {new Date(notif.time).toLocaleString(undefined, {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        })}
                       </div>
                     </div>
                   </div>

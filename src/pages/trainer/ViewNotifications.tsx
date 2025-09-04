@@ -9,15 +9,13 @@ export default function ViewNotifications() {
   const { user } = useAuth();
 
   // Assuming backend sends "TRAINER" or "MEMBER"
-  const userRecipient = user?.role?.toUpperCase() || "TRAINER";
+  const userRecipient = user?.role?.toUpperCase() || "MEMBER";
 
   useEffect(() => {
     markAllAsRead(userRecipient);
   }, []);
 
-  const filteredNotifications = notifications.filter(
-    (n) => n.role === userRecipient
-  );
+  const filteredNotifications = notifications;
 
   return (
     <div className="space-y-6 p-6">
@@ -49,7 +47,12 @@ export default function ViewNotifications() {
                 <TableRow key={n.id}>
                   <TableCell>{n.title}</TableCell>
                   <TableCell>{n.content}</TableCell>
-                  <TableCell>{n.sentAt}</TableCell>
+                  <TableCell>
+                    {new Date(n.time).toLocaleString(undefined, {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    })}
+                  </TableCell>
                   <TableCell>
                     {n.read ? (
                       <span className="text-green-600 font-medium">Read</span>

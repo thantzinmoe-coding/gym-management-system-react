@@ -4,11 +4,10 @@ import api from "@/services/api";
 const notificationUrl = "/api/v1/notifications";
 
 export const notificationService = {
-  sendNotification: async (notificationData: { title: string; message: string; role: string }) => {
+  sendNotification: async (notificationData: { title: string; message: string }) => {
     const response = await api.post(`${notificationUrl}/send`, {
       title: notificationData.title,
-      content: notificationData.message,
-      role: notificationData.role,
+      content: notificationData.message
     });
     return response.data;
   },

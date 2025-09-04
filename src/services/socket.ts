@@ -1,17 +1,16 @@
 import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
+import Cookies from "js-cookie";
 
-const socketUrl = "http://localhost:8080/ws";
+const token = Cookies.get('token'); // ✅ get your JWT token from local storage
 
 const client = new Client({
-  webSocketFactory: () => new SockJS(socketUrl),
+  webSocketFactory: () => new SockJS("http://localhost:8080/ws"),
+  connectHeaders: {
+    Authorization: `Bearer ${token}`, // ✅ send token during connect
+  },
   reconnectDelay: 5000,
-  onConnect: () => {
-    console.log("✅ Connected to WebSocket");
-  },
-  onStompError: (frame) => {
-    console.error("❌ Broker error:", frame.headers["message"]);
-  },
+  debug: (str) => console.log(str),
 });
 
 export default client;

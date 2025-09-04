@@ -70,14 +70,6 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
           console.log("🔔 New notification received:", notif);
           addNotification(notif);
         });
-
-        if (user?.id) {
-          client.subscribe(`/user/${user.id}/queue/notifications`, (message) => {
-            const notif: Notification = JSON.parse(message.body);
-            console.log("📩 Personal notification:", notif);
-            addNotification(notif);
-          });
-        }
       };
 
       client.onStompError = (frame) => {
