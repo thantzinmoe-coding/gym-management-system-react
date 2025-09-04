@@ -87,253 +87,254 @@ const AppRoutes = () => {
   const { user } = useAuth();
 
   return (
-    <Routes>
-      {/* Public Routes */}
-      <Route
-        path="/"
-        element={user ? <Navigate to={`/${user.role}/dashboard`} replace /> : <Index />}
-      />
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      <Route path="/verify-otp" element={<VerifyOTP />} />
-      <Route path="/setup/member-profile" element={<MemberProfileSetup />} />
-      <Route path="/setup/trainer-profile" element={<TrainerProfileSetup />} />
-      <Route path="/AboutUs" element={<AboutUs />} />
-      <Route path="/Services" element={<Services />} />
-      <Route path="/ContactUs" element={<ContactUs />} />
-      <Route path="/Reviews" element={<Reviews />} />
-      <Route path="/Index" element={<Home />} />
-      <Route path="/member/book-packages" element={<Packages />} />
+    <NotificationProvider>
+      <Routes>
+        {/* Public Routes */}
+        <Route
+          path="/"
+          element={user ? <Navigate to={`/${user.role}/dashboard`} replace /> : <Index />}
+        />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/verify-otp" element={<VerifyOTP />} />
+        <Route path="/setup/member-profile" element={<MemberProfileSetup />} />
+        <Route path="/setup/trainer-profile" element={<TrainerProfileSetup />} />
+        <Route path="/AboutUs" element={<AboutUs />} />
+        <Route path="/Services" element={<Services />} />
+        <Route path="/ContactUs" element={<ContactUs />} />
+        <Route path="/Reviews" element={<Reviews />} />
+        <Route path="/Index" element={<Home />} />
+        <Route path="/member/book-packages" element={<Packages />} />
 
-      {/* Admin Routes */}
-      <Route
-        path="/admin/dashboard"
-        element={
-          <ProtectedRoute allowedRoles={["admin"]}>
-            <AdminDashboard />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/members"
-        element={
-          <ProtectedRoute allowedRoles={["admin"]}>
-            <ManageMembers />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/attendance"
-        element={
-          <ProtectedRoute allowedRoles={["admin"]}>
-            <ManageAttendance />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/trainers"
-        element={
-          <ProtectedRoute allowedRoles={["admin"]}>
-            <ManageTrainers />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/equipment"
-        element={
-          <ProtectedRoute allowedRoles={["admin"]}>
-            <AdminManageEquipments />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/notifications"
-        element={
-          <ProtectedRoute allowedRoles={["admin"]}>
-            <ViewNotifications />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/send-notification"
-        element={
-          <ProtectedRoute allowedRoles={["admin"]}>
-            <SendNotifications />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/packages"
-        element={
-          <ProtectedRoute allowedRoles={["admin"]}>
-            <ManagePackages />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/salary"
-        element={
-          <ProtectedRoute allowedRoles={["admin"]}>
-            <PaySalary />
-          </ProtectedRoute>
-        }
-      />
+        {/* Admin Routes */}
+        <Route
+          path="/admin/dashboard"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <AdminDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/members"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <ManageMembers />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/attendance"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <ManageAttendance />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/trainers"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <ManageTrainers />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/equipment"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <AdminManageEquipments />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/notifications"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <ViewNotifications />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/send-notification"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <SendNotifications />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/packages"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <ManagePackages />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/salary"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <PaySalary />
+            </ProtectedRoute>
+          }
+        />
 
-      {/* Trainer Routes */}
-      <Route
-        path="/trainer/dashboard"
-        element={
-          <ProtectedRoute allowedRoles={["trainer"]}>
-            <TrainerDashboard />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/trainer/update-profile"
-        element={
-          <ProtectedRoute allowedRoles={["trainer"]}>
-            <TrainerUpdateProfile />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/trainer/schedule"
-        element={
-          <ProtectedRoute allowedRoles={["trainer"]}>
-            <ManageSchedule />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/trainer/members"
-        element={
-          <ProtectedRoute allowedRoles={["trainer"]}>
-            <ViewMembers />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/trainer/equipment"
-        element={
-          <ProtectedRoute allowedRoles={["trainer"]}>
-            <TrainerViewEquipments />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/trainer/packages"
-        element={
-          <ProtectedRoute allowedRoles={["trainer"]}>
-            <ViewPackages />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/trainer/chat"
-        element={
-          <ProtectedRoute allowedRoles={["trainer"]}>
-            <ChatWithMembers />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/trainer/attendance"
-        element={
-          <ProtectedRoute allowedRoles={["trainer"]}>
-            <TrainerViewAttendance />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/trainer/notifications"
-        element={
-          <ProtectedRoute allowedRoles={["trainer"]}>
-            <TrainerViewNotifications />
-          </ProtectedRoute>
-        }
-      />
+        {/* Trainer Routes */}
+        <Route
+          path="/trainer/dashboard"
+          element={
+            <ProtectedRoute allowedRoles={["trainer"]}>
+              <TrainerDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/trainer/update-profile"
+          element={
+            <ProtectedRoute allowedRoles={["trainer"]}>
+              <TrainerUpdateProfile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/trainer/schedule"
+          element={
+            <ProtectedRoute allowedRoles={["trainer"]}>
+              <ManageSchedule />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/trainer/members"
+          element={
+            <ProtectedRoute allowedRoles={["trainer"]}>
+              <ViewMembers />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/trainer/equipment"
+          element={
+            <ProtectedRoute allowedRoles={["trainer"]}>
+              <TrainerViewEquipments />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/trainer/packages"
+          element={
+            <ProtectedRoute allowedRoles={["trainer"]}>
+              <ViewPackages />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/trainer/chat"
+          element={
+            <ProtectedRoute allowedRoles={["trainer"]}>
+              <ChatWithMembers />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/trainer/attendance"
+          element={
+            <ProtectedRoute allowedRoles={["trainer"]}>
+              <TrainerViewAttendance />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/trainer/notifications"
+          element={
+            <ProtectedRoute allowedRoles={["trainer"]}>
+              <TrainerViewNotifications />
+            </ProtectedRoute>
+          }
+        />
 
-      {/* Member Routes */}
-      <Route
-        path="/member/dashboard"
-        element={
-          <ProtectedRoute allowedRoles={["member"]}>
-            <MemberDashboard />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/member/packages"
-        element={
-          <ProtectedRoute allowedRoles={["member"]}>
-            <BookPackages />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/member/profile"
-        element={
-          <ProtectedRoute allowedRoles={["member"]}>
-            <ManageProfile />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/member/attendance"
-        element={
-          <ProtectedRoute allowedRoles={["member"]}>
-            <MemberViewAttendance />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/member/trainers"
-        element={
-          <ProtectedRoute allowedRoles={["member"]}>
-            <ViewTrainers />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/member/equipment"
-        element={
-          <ProtectedRoute allowedRoles={["member"]}>
-            <MemberViewEquipments />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/member/chat"
-        element={
-          <ProtectedRoute allowedRoles={["member"]}>
-            <ChatWithTrainers />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/member/feedback"
-        element={
-          <ProtectedRoute allowedRoles={["member"]}>
-            <GiveFeedback />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/member/notifications"
-        element={
-          <ProtectedRoute allowedRoles={["member"]}>
-            <MemberViewNotifications />
-          </ProtectedRoute>
-        }
-      />
+        {/* Member Routes */}
+        <Route
+          path="/member/dashboard"
+          element={
+            <ProtectedRoute allowedRoles={["member"]}>
+              <MemberDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/member/packages"
+          element={
+            <ProtectedRoute allowedRoles={["member"]}>
+              <BookPackages />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/member/profile"
+          element={
+            <ProtectedRoute allowedRoles={["member"]}>
+              <ManageProfile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/member/attendance"
+          element={
+            <ProtectedRoute allowedRoles={["member"]}>
+              <MemberViewAttendance />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/member/trainers"
+          element={
+            <ProtectedRoute allowedRoles={["member"]}>
+              <ViewTrainers />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/member/equipment"
+          element={
+            <ProtectedRoute allowedRoles={["member"]}>
+              <MemberViewEquipments />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/member/chat"
+          element={
+            <ProtectedRoute allowedRoles={["member"]}>
+              <ChatWithTrainers />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/member/feedback"
+          element={
+            <ProtectedRoute allowedRoles={["member"]}>
+              <GiveFeedback />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/member/notifications"
+          element={
+            <ProtectedRoute allowedRoles={["member"]}>
+              <MemberViewNotifications />
+            </ProtectedRoute>
+          }
+        />
 
-      {/* Catch-All */}
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+        {/* Catch-All */}
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </NotificationProvider>
   );
 };
 
-// ✅ Main App Component with Providers
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>

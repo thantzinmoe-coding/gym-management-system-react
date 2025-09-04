@@ -8,20 +8,21 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Send, Bell, Clock, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useNotifications, RecipientType, Notification } from "@/context/NotificationContext";
+import { useNotifications } from "@/context/NotificationContext";
+import { notificationService } from "@/services/notificationService";
 
 export default function SendNotifications() {
   const { toast } = useToast();
-  const { notifications, addNotification } = useNotifications();
+  const { notifications } = useNotifications();
 
   const [notification, setNotification] = useState<{
     title: string;
     message: string;
-    recipient: RecipientType | "";
-  }>({ title: "", message: "", recipient: "" });
+    role: string;
+  }>({ title: "", message: "", role: "" });
 
-  const handleSendNotification = () => {
-    if (!notification.title || !notification.message || !notification.recipient) {
+  const handleSendNotification = async () => {
+    if (!notification.title || !notification.message || !notification.role) {
       toast({
         title: "Missing Information",
         description: "Please fill all fields.",
@@ -30,14 +31,21 @@ export default function SendNotifications() {
       return;
     }
 
-    addNotification(notification as Omit<Notification, "id" | "sentAt">);
+    try {
+      await notificationService.sendNotification(notification);
+      toast({
+        title: "Notification Sent",
+        description: `Notification sent to ${notification.role}`,
+      });
 
-    toast({
-      title: "Notification Sent",
-      description: `Notification sent to ${notification.recipient}`,
-    });
-
-    setNotification({ title: "", message: "", recipient: "" });
+      setNotification({ title: "", message: "", role: "" });
+    } catch (error: any) {
+      toast({
+        title: "Failed to Send",
+        description: error.message || "Something went wrong",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -80,19 +88,20 @@ export default function SendNotifications() {
             </div>
 
             <div>
-              <Label htmlFor="recipient">Send To</Label>
+              <Label htmlFor="role">Send To</Label>
               <Select
-                value={notification.recipient}
+                value={notification.role}
                 onValueChange={(value) =>
-                  setNotification({ ...notification, recipient: value as RecipientType })
+                  setNotification({ ...notification, role: value })
                 }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select recipients" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="All Members">All Members</SelectItem>
-                  <SelectItem value="All Trainers">All Trainers</SelectItem>
+                  <SelectItem value="ALL">All Members</SelectItem>
+                  <SelectItem value="MEMBER">All Members</SelectItem>
+                  <SelectItem value="TRAINER">All Trainers</SelectItem>
                 </SelectContent>
               </Select>
             </div>

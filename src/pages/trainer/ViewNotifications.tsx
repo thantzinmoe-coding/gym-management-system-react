@@ -8,13 +8,16 @@ export default function ViewNotifications() {
   const { notifications, markAllAsRead } = useNotifications();
   const { user } = useAuth();
 
-  const userRecipient = user?.role === 'trainer' ? 'All Trainers' : 'All Members';
-  
+  // Assuming backend sends "TRAINER" or "MEMBER"
+  const userRecipient = user?.role?.toUpperCase() || "TRAINER";
+
   useEffect(() => {
-    markAllAsRead(userRecipient); // mark all notifications for this role as read
+    markAllAsRead(userRecipient);
   }, []);
 
-  const filteredNotifications = notifications.filter(n => n.recipient === userRecipient);
+  const filteredNotifications = notifications.filter(
+    (n) => n.role === userRecipient
+  );
 
   return (
     <div className="space-y-6 p-6">
@@ -42,10 +45,10 @@ export default function ViewNotifications() {
                   </TableCell>
                 </TableRow>
               )}
-              {filteredNotifications.map(n => (
+              {filteredNotifications.map((n) => (
                 <TableRow key={n.id}>
                   <TableCell>{n.title}</TableCell>
-                  <TableCell>{n.message}</TableCell>
+                  <TableCell>{n.content}</TableCell>
                   <TableCell>{n.sentAt}</TableCell>
                   <TableCell>
                     {n.read ? (

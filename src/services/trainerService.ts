@@ -1,7 +1,7 @@
 // src/services/trainerService.ts
 import api from '@/services/api';
 
-const trainerUrl = 'api/v1/super_admin'; 
+const trainerUrl = 'api/v1/super_admin';
 // Corrected: Relative to baseURL in api.ts
 
 export const trainerService = {
@@ -24,16 +24,21 @@ export const trainerService = {
             throw error.response?.data || { message: 'Failed to fetch active trainers' };
         }
     },
-    
+
     updateTrainerStatus: async (trainerId: number, status: string) => {
-    try {
-      // Assuming your backend endpoint for updating trainer status is something like this:
-      const response = await api.patch(`${trainerUrl}/trainers/${trainerId}`, { status });
-      return response.data;
-    } catch (error) {
-      console.error(`Error updating trainer ${trainerId}:`, error);
-      throw error.response?.data || { message: 'Failed to update trainer status' };
-    }
-  },
+        try {
+            // Assuming your backend endpoint for updating trainer status is something like this:
+            const response = await api.patch(
+                `${trainerUrl}/accept-trainer/${trainerId}`,
+                status, // just send the string directly
+                { headers: { "Content-Type": "text/plain" } }
+            );
+
+            return response.data;
+        } catch (error) {
+            console.error(`Error updating trainer ${trainerId}:`, error);
+            throw error.response?.data || { message: 'Failed to update trainer status' };
+        }
+    },
 };
 
