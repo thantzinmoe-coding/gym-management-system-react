@@ -5,37 +5,19 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Upload, X } from "lucide-react";
-
-export interface Equipment {
-  id: string;
-  name: string;
-  purchaseDate: string;
-  condition: "Excellent" | "Good" | "Fair" | "Poor";
-  lastMaintenanceDate: string;
-  nextMaintenanceDate: string;
-  imageUrl?: string;
-}
-
-export interface EquipmentFormData {
-  name: string;
-  purchaseDate: string;
-  condition: "Excellent" | "Good" | "Fair" | "Poor";
-  lastMaintenanceDate: string;
-  nextMaintenanceDate: string;
-  imageFile?: File;
-}
+import { useEquipments, Equipment, EquipmentFormData } from "@/context/EquipmentContext";
 
 interface EquipmentFormProps {
   equipment?: Equipment;
-  onSubmit: (data: EquipmentFormData) => void;
   onCancel: () => void;
 }
 
-export const EquipmentForm = ({ equipment, onSubmit, onCancel }: EquipmentFormProps) => {
+export const EquipmentForm = ({ equipment, onCancel }: EquipmentFormProps) => {
+  const { addEquipment, updateEquipment } = useEquipments();
   const [formData, setFormData] = useState<EquipmentFormData>({
     name: equipment?.name || "",
     purchaseDate: equipment?.purchaseDate || "",
-    condition: equipment?.condition || "Good",
+    equipmentCondition: equipment?.equipmentCondition || "Good",
     lastMaintenanceDate: equipment?.lastMaintenanceDate || "",
     nextMaintenanceDate: equipment?.nextMaintenanceDate || "",
   });
@@ -62,10 +44,15 @@ export const EquipmentForm = ({ equipment, onSubmit, onCancel }: EquipmentFormPr
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit({
+    const data = {
       ...formData,
       imageFile: selectedImage || undefined,
-    });
+    };
+    if (equipment) {
+      updateEquipment(equipment.id, data);
+    } else {
+      addEquipment(data);
+    }
   };
 
   const handleInputChange = (field: keyof EquipmentFormData, value: string) => {
@@ -120,8 +107,8 @@ export const EquipmentForm = ({ equipment, onSubmit, onCancel }: EquipmentFormPr
             <div className="space-y-2">
               <Label>Condition</Label>
               <Select
-                value={formData.condition}
-                onValueChange={(value) => handleInputChange("condition", value)}
+                value={formData.equipmentCondition}
+                onValueChange={(value) => handleInputChange("equipmentCondition", value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select condition" />

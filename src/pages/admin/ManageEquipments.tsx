@@ -106,7 +106,7 @@ export default function ManageEquipments() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {equipments.filter((eq) => eq.condition === "Poor").length}
+                {equipments.filter((eq) => eq.equipmentCondition === "Poor").length}
               </div>
             </CardContent>
           </Card>
@@ -141,8 +141,6 @@ export default function ManageEquipments() {
                 <EquipmentCard
                   key={equipment.id}
                   equipment={equipment}
-                  onEdit={handleEditEquipment}
-                  onDelete={handleDeleteEquipment}
                 />
               ))}
             </div>
@@ -152,12 +150,11 @@ export default function ManageEquipments() {
 
       {/* Form Modal */}
       {showForm && (
-        <EquipmentForm
-          equipment={editingEquipment}
-          onSubmit={handleFormSubmit}
-          onCancel={handleFormCancel}
-        />
-      )}
+  <EquipmentForm
+    equipment={editingEquipment}
+    onCancel={handleFormCancel}
+  />
+)}
     </div>
   );
 }

@@ -3,28 +3,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Trash2, Edit3, Calendar, Wrench } from "lucide-react";
-
-export interface Equipment {
-  id: string;
-  name: string;
-  purchaseDate: string;
-  condition: "Excellent" | "Good" | "Fair" | "Poor";
-  lastMaintenanceDate: string;
-  nextMaintenanceDate: string;
-  imageUrl?: string;
-}
+import { useEquipments, Equipment } from "@/context/EquipmentContext";
 
 interface EquipmentCardProps {
   equipment: Equipment;
-  onDelete: (id: string) => void;
-  onEdit: (equipment: Equipment) => void;
 }
 
-export const EquipmentCard = ({ equipment, onDelete, onEdit }: EquipmentCardProps) => {
+export const EquipmentCard = ({ equipment }: EquipmentCardProps) => {
   const [imageError, setImageError] = useState(false);
+  const { deleteEquipment, updateEquipment } = useEquipments();
 
   const getConditionVariant = (condition: string) => {
-    switch (condition.toLowerCase()) {
+    switch (condition?.toLowerCase()) {
       case "excellent":
         return "default";
       case "good":
@@ -38,6 +28,16 @@ export const EquipmentCard = ({ equipment, onDelete, onEdit }: EquipmentCardProp
     }
   };
 
+  const handleDelete = (id: string) => {
+    deleteEquipment(id);
+  };
+  
+
+  const handleEdit = (equipment: Equipment) => {
+    console.log("Edit equipment:", equipment.id);
+    updateEquipment(equipment.id, equipment);
+  };
+
   return (
     <Card className="h-48 w-full max-w-sm">
       <CardHeader className="pb-4">
@@ -49,7 +49,7 @@ export const EquipmentCard = ({ equipment, onDelete, onEdit }: EquipmentCardProp
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => onEdit(equipment)}
+              onClick={() => handleEdit(equipment)}
               className="h-8 w-8 p-0"
             >
               <Edit3 className="h-4 w-4" />
@@ -57,7 +57,7 @@ export const EquipmentCard = ({ equipment, onDelete, onEdit }: EquipmentCardProp
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => onDelete(equipment.id)}
+              onClick={() => handleDelete(equipment.id)}
               className="h-8 w-8 p-0 text-destructive hover:text-destructive"
             >
               <Trash2 className="h-4 w-4" />
@@ -87,8 +87,8 @@ export const EquipmentCard = ({ equipment, onDelete, onEdit }: EquipmentCardProp
         <div className="space-y-2">
           <div className="flex justify-between items-center">
             <span className="text-sm font-medium">Condition:</span>
-            <Badge variant={getConditionVariant(equipment.condition)}>
-              {equipment.condition}
+            <Badge variant={getConditionVariant(equipment.equipmentCondition)}>
+              {equipment.equipmentCondition}
             </Badge>
           </div>
           
