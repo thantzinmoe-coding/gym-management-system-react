@@ -81,32 +81,41 @@ export default function ChatWithTrainers() {
   });
 
   // Fetch trainer avatars
-  useEffect(() => {
-    async function fetchTrainerAvatars() {
-      if (!trainersData?.data) return;
-      const newAvatars: Record<number, string> = {};
+// Fetch trainer avatars with Authorization header
+useEffect(() => {
+  async function fetchTrainerAvatars() {
+    if (!trainersData?.data) return;
+    const newAvatars: Record<number, string> = {};
+    const token = Cookies.get('token');
 
-      await Promise.all(
-        trainersData.data.map(async (trainer) => {
-          if (trainer.avatarUrl) {
-            try {
-              const response = await fetch(trainer.avatarUrl);
-              if (response.ok) {
-                const blob = await response.blob();
-                newAvatars[trainer.id] = URL.createObjectURL(blob);
-              }
-            } catch (err) {
-              console.error(`Failed to fetch avatar for trainer ${trainer.id}:`, err);
+    await Promise.all(
+      trainersData.data.map(async (trainer) => {
+        if (trainer.avatarUrl && token) {
+          try {
+            const response = await fetch(`${trainer.avatarUrl}`, {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            });
+            if (response.ok) {
+              const blob = await response.blob();
+              newAvatars[trainer.id] = URL.createObjectURL(blob);
+            } else {
+              console.error(`Failed to fetch avatar for trainer ${trainer.id}: ${response.statusText}`);
             }
+          } catch (err) {
+            console.error(`Error fetching avatar for trainer ${trainer.id}:`, err);
           }
-        })
-      );
+        }
+      })
+    );
 
-      setTrainerAvatars(newAvatars);
-    }
+    setTrainerAvatars(newAvatars);
+  }
 
-    fetchTrainerAvatars();
-  }, [trainersData]);
+  fetchTrainerAvatars();
+}, [trainersData]);
+
 
   // Fetch chat rooms
   const { data: chatRooms, isLoading: roomsLoading } = useQuery<ChatRoomResponse[]>({
@@ -200,8 +209,8 @@ export default function ChatWithTrainers() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-black">Chat with Trainers</h1>
-        <p className="text-black">Connect with your personal trainers for guidance and support</p>
+        <h1 className="text-3xl font-bold text-black">Chat with Users</h1>
+        <p className="text-black">Connect with your opponents and trainers for guidance, support, and sharing experience</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[600px]">
@@ -209,7 +218,7 @@ export default function ChatWithTrainers() {
           <CardHeader>
             <CardTitle className="flex items-center text-black">
               <MessageCircle className="h-5 w-5 mr-2 text-black" />
-              My Trainers
+              Users
             </CardTitle>
             <div className="flex items-center space-x-2">
               <Search className="h-4 w-4 text-black" />
@@ -355,7 +364,7 @@ export default function ChatWithTrainers() {
             <div className="flex items-center justify-center h-full bg-white">
               <div className="text-center">
                 <User className="h-12 w-12 text-black mx-auto mb-4" />
-                <p className="text-black">Select a trainer to start chatting</p>
+                <p className="text-black">Select a user to start chatting</p>
               </div>
             </div>
           )}

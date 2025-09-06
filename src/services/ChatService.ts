@@ -2,7 +2,15 @@ import axios from 'axios';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import api from './api';
-import { ChatMessageRequest, ChatMessageResponse, ChatRoomResponse, TrainerResponseDto, PaginatedApiResponse, TypingIndicator } from '@/services/types';
+import { authService } from '@/services/authService';
+import {
+  ChatMessageRequest,
+  ChatMessageResponse,
+  ChatRoomResponse,
+  TrainerResponseDto,
+  PaginatedApiResponse,
+  TypingIndicator
+} from '@/services/types';
 
 const API_BASE = import.meta.env.REACT_APP_API_BASE || 'http://localhost:8080/api/v1';
 const WS_BASE = import.meta.env.REACT_APP_WS_BASE || 'http://localhost:8080/ws';
@@ -16,6 +24,9 @@ interface WebSocketCallbacks {
 const axiosInstance = axios.create({
   baseURL: API_BASE,
 });
+
+const user = authService.getCurrentUser();
+const id = user ? user.id : null;
 
 export class ChatService {
   private stompClient: Client | null = null;
@@ -40,19 +51,23 @@ export class ChatService {
       reconnectDelay: 5000,
       onConnect: () => {
         console.log('WebSocket connected for userId:', this.userId);
-        this.stompClient?.subscribe(`/user/queue/messages`, (msg) => {
+
+        // Subscribe to messages
+        this.stompClient?.subscribe(`/user/${id}/queue/messages`, (msg) => {
           const payload = JSON.parse(msg.body);
           if (payload.type === 'NEW_MESSAGE') {
             callbacks.onMessage(payload.data);
           }
         });
 
+        // Subscribe to errors
         this.stompClient?.subscribe('/user/queue/errors', (msg) => {
           const payload = JSON.parse(msg.body);
           callbacks.onError(payload.data || 'An error occurred');
         });
 
-        this.stompClient?.subscribe('/user/queue/typing', (msg) => {
+        // Subscribe to typing indicators
+        this.stompClient?.subscribe(`/user/${id}/queue/typing`, (msg) => {
           const payload: TypingIndicator = JSON.parse(msg.body);
           callbacks.onTyping(payload.userId, payload.userName);
         });
@@ -84,22 +99,22 @@ export class ChatService {
   }
 
   async getChatRooms(): Promise<ChatRoomResponse[]> {
-    const res = await axiosInstance.get('/chat/rooms');
+    const res = await axiosInstance.get(`/chat/rooms/${id}`);
     return res.data;
   }
 
   async getPrivateChatHistory(otherUserId: number, page: number = 0, size: number = 50): Promise<ChatMessageResponse[]> {
-    const res = await axiosInstance.get(`/chat/private/${otherUserId}?page=${page}&size=${size}`);
+    const res = await axiosInstance.get(`/chat/private/${id}/${otherUserId}?page=${page}&size=${size}`);
     return res.data.data.reverse();
   }
 
   async sendMessage(request: ChatMessageRequest): Promise<ChatMessageResponse> {
-    const res = await axiosInstance.post('/chat/send', request);
+    const res = await axiosInstance.post(`/chat/send/${id}`, request);
     return res.data;
   }
 
   async markMessagesAsRead(senderId: number): Promise<void> {
-    await axiosInstance.post('/chat/mark-read', { senderId });
+    await axiosInstance.post(`/chat/mark-read/${id}`, { senderId });
   }
 
   async checkOnlineStatus(userIds: number[]): Promise<Record<number, boolean>> {
@@ -116,6 +131,27 @@ export class ChatService {
           recipientId,
         }),
       });
+    }
+  }
+
+  // ✅ Subscribe to real-time online/offline updates
+  subscribeOnlineStatus(callback: (userId: number, online: boolean) => void) {
+    if (!this.stompClient) return;
+
+    const subscribeFn = () => {
+      if (!this.stompClient) return;
+      this.stompClient.subscribe('/topic/online-status', (msg) => {
+        const payload: Record<number, boolean> = JSON.parse(msg.body);
+        Object.entries(payload).forEach(([userId, online]) => {
+          callback(Number(userId), online as boolean);
+        });
+      });
+    };
+
+    if (this.stompClient.connected) {
+      subscribeFn();
+    } else {
+      this.stompClient.onConnect = () => subscribeFn();
     }
   }
 }

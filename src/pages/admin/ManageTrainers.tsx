@@ -174,7 +174,7 @@ export default function ManageTrainers() {
                       {trainer.specialization?.map((spec: string, i: number) => (
                         <Badge key={i} variant="outline">{spec}</Badge>
                       ))}
-                      <Badge variant="outline">{trainer.experience} yrs</Badge>
+                      <Badge variant="outline">{trainer.experience}</Badge>
                     </div>
                   </div>
                 </div>
