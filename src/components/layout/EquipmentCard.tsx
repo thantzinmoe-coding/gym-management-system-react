@@ -4,12 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Trash2, Edit3, Calendar, Wrench } from "lucide-react";
 import { useEquipments, Equipment } from "@/context/EquipmentContext";
+import { parseISO, format } from 'date-fns'; // Import date-fns
 
 interface EquipmentCardProps {
   equipment: Equipment;
+  onEdit: (equipment: Equipment) => void; // ADDED: onEdit prop
 }
 
-export const EquipmentCard = ({ equipment }: EquipmentCardProps) => {
+export const EquipmentCard = ({ equipment, onEdit }: EquipmentCardProps) => { // ADDED: onEdit to props
   const [imageError, setImageError] = useState(false);
   const { deleteEquipment, updateEquipment } = useEquipments();
 
@@ -31,11 +33,10 @@ export const EquipmentCard = ({ equipment }: EquipmentCardProps) => {
   const handleDelete = (id: string) => {
     deleteEquipment(id);
   };
-  
 
   const handleEdit = (equipment: Equipment) => {
     console.log("Edit equipment:", equipment.id);
-    updateEquipment(equipment.id, equipment);
+    onEdit(equipment); // Called the onEdit function
   };
 
   return (
@@ -96,20 +97,20 @@ export const EquipmentCard = ({ equipment }: EquipmentCardProps) => {
             <div className="flex items-center gap-2">
               <Calendar className="h-3 w-3" />
               <span className="text-muted-foreground">Purchased:</span>
-              <span>{new Date(equipment.purchaseDate).toLocaleDateString()}</span>
+              <span>{format(parseISO(equipment.purchaseDate), 'MM/dd/yyyy')}</span>
             </div>
             
             <div className="flex items-center gap-2">
               <Wrench className="h-3 w-3" />
               <span className="text-muted-foreground">Last Maintenance:</span>
-              <span>{new Date(equipment.lastMaintenanceDate).toLocaleDateString()}</span>
+              <span>{format(parseISO(equipment.lastMaintenanceDate), 'MM/dd/yyyy')}</span>
             </div>
             
             <div className="flex items-center gap-2">
               <Calendar className="h-3 w-3" />
               <span className="text-muted-foreground">Next Maintenance:</span>
               <span className="font-medium">
-                {new Date(equipment.nextMaintenanceDate).toLocaleDateString()}
+                {format(parseISO(equipment.nextMaintenanceDate), 'MM/dd/yyyy')}
               </span>
             </div>
           </div>

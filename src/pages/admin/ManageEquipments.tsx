@@ -141,6 +141,7 @@ export default function ManageEquipments() {
                 <EquipmentCard
                   key={equipment.id}
                   equipment={equipment}
+                  onEdit={handleEditEquipment} // Passed the handleEditEquipment function
                 />
               ))}
             </div>
@@ -150,11 +151,11 @@ export default function ManageEquipments() {
 
       {/* Form Modal */}
       {showForm && (
-  <EquipmentForm
-    equipment={editingEquipment}
-    onCancel={handleFormCancel}
-  />
-)}
+        <EquipmentForm
+          equipment={editingEquipment}
+          onCancel={handleFormCancel}
+        />
+      )}
     </div>
   );
 }

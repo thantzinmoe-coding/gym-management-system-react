@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Upload, X } from "lucide-react";
 import { useEquipments, Equipment, EquipmentFormData } from "@/context/EquipmentContext";
+import { useNavigate } from 'react-router-dom'; // Import useNavigate
 
 interface EquipmentFormProps {
   equipment?: Equipment;
@@ -21,6 +22,8 @@ export const EquipmentForm = ({ equipment, onCancel }: EquipmentFormProps) => {
     lastMaintenanceDate: equipment?.lastMaintenanceDate || "",
     nextMaintenanceDate: equipment?.nextMaintenanceDate || "",
   });
+
+  const navigate = useNavigate(); // Initialize useNavigate
   
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>(equipment?.imageUrl || "");
@@ -43,7 +46,7 @@ export const EquipmentForm = ({ equipment, onCancel }: EquipmentFormProps) => {
   };
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault(); // Prevent default form submission
     const data = {
       ...formData,
       imageFile: selectedImage || undefined,
@@ -53,6 +56,7 @@ export const EquipmentForm = ({ equipment, onCancel }: EquipmentFormProps) => {
     } else {
       addEquipment(data);
     }
+    navigate('/admin/equipment'); // Redirect to /admin/equipment
   };
 
   const handleInputChange = (field: keyof EquipmentFormData, value: string) => {
@@ -100,7 +104,6 @@ export const EquipmentForm = ({ equipment, onCancel }: EquipmentFormProps) => {
                 onChange={(e) => handleInputChange("purchaseDate", e.target.value)}
                 required
               />
-              
             </div>
 
             {/* Condition */}
