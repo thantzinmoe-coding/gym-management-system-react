@@ -1,7 +1,7 @@
 // src/services/trainerService.ts
 import api from '@/services/api';
 
-const trainerUrl = 'api/v1/super_admin';
+const trainerUrl = '/api/v1/super_admin';
 // Corrected: Relative to baseURL in api.ts
 
 export const trainerService = {

@@ -22,4 +22,9 @@ export const notificationService = {
     const response = await api.post(`${notificationUrl}/${notificationId}/read`);
     return response.data;
   },
+
+  markAllAsRead: async (userId: number) => {
+    const response = await api.post(`${notificationUrl}/${userId}/read-all`);
+    return response.data;
+  }
 };
