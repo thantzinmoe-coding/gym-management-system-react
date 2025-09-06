@@ -118,10 +118,10 @@ api.interceptors.response.use(
           // Clear auth data
           Cookies.remove('token');
           Cookies.remove('refreshToken');
-          Cookies.remove('user');
+          localStorage.removeItem('user');
           
           // Redirect to auth page
-          window.location.href = '/auth';
+          window.location.href = '/';
           return Promise.reject(err);
         }
       }

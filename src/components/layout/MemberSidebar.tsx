@@ -33,7 +33,7 @@ const memberMenuItems = [
   { title: "View Attendance", url: "/member/attendance", icon: UserCheck },
   { title: "View Trainers", url: "/member/trainers", icon: Users },
   { title: "View Equipment", url: "/member/equipment", icon: Dumbbell },
-  { title: "Chat with Trainers", url: "/member/chat", icon: MessageCircle },
+  { title: "Message", url: "/member/chat", icon: MessageCircle },
   { title: "Give Feedback", url: "/member/feedback", icon: Star },
   { title: "View Notifications", url: "/member/notifications", icon: Bell },
 ];

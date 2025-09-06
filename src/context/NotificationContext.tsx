@@ -1,65 +1,92 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
-
-export type RecipientType = "All Members" | "All Trainers";
+// /src/context/NotificationContext.tsx
+import { createContext, useContext, useEffect, useState } from "react";
+import client from "@/services/socket"; // STOMP client from socket.ts
+import { notificationService } from "@/services/notificationService";
+import { authService } from '@/services/authService';
 
 export interface Notification {
   id: number;
   title: string;
-  message: string;
-  recipient: RecipientType;
-  sentAt: string;
+  content: string;
+  time: string; // matches backend DTO
   read: boolean;
 }
 
+
 interface NotificationContextType {
   notifications: Notification[];
-  addNotification: (notif: Omit<Notification, "id" | "sentAt" | "read">) => void;
-  markAsRead: (id: number) => void;
-  markAllAsRead: (recipient?: RecipientType) => void;
+  addNotification: (n: Notification) => void;
+  markAllAsRead: (recipient?: string) => Promise<void>;
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
-export const NotificationProvider = ({ children }: { children: ReactNode }) => {
+export const NotificationProvider = ({ children }: { children: React.ReactNode }) => {
+  const user = authService.getCurrentUser(); // ✅ get logged-in user
   const [notifications, setNotifications] = useState<Notification[]>([]);
-/*
-  // Load notifications from localStorage
-  useEffect(() => {
-    const stored = localStorage.getItem("notifications");
-    if (stored) setNotifications(JSON.parse(stored));
-  }, []);
 
-  // Save notifications to localStorage
+  const addNotification = (n: Notification) => {
+    setNotifications((prev) => [n, ...prev]);
+  };
+
+  const markAllAsRead = async () => {
+    try {
+      const markAsRead = await notificationService.markAllAsRead(user.id);
+
+      setNotifications((prev) =>
+        prev.map((n) => ({ ...n, read: true }))
+      );
+    } catch (err) {
+      console.error("❌ Failed to mark notifications as read:", err);
+    }
+  };
+
+
   useEffect(() => {
-    localStorage.setItem("notifications", JSON.stringify(notifications));
-  }, [notifications]);
-*/
-  const addNotification = (notif: Omit<Notification, "id" | "sentAt" | "read">) => {
-    const newNotif: Notification = {
-      id: notifications.length + 1,
-      sentAt: new Date().toLocaleString(),
-      read: false,
-      ...notif,
+    if (!user?.id) return;
+
+    let isMounted = true;
+
+    const fetchNotifications = async () => {
+      try {
+        console.log("📥 Fetching notifications for user:", user.id);
+        const data = await notificationService.getForUser(user.id);
+        if (isMounted) setNotifications(data);
+      } catch (err) {
+        console.error("❌ Failed to fetch notifications:", err);
+      }
     };
-    setNotifications([newNotif, ...notifications]);
-  };
 
-  const markAsRead = (id: number) => {
-    setNotifications(prev =>
-      prev.map(n => (n.id === id ? { ...n, read: true } : n))
-    );
-  };
+    fetchNotifications();
 
-  const markAllAsRead = (recipient?: RecipientType) => {
-    setNotifications(prev =>
-      prev.map(n =>
-        recipient ? (n.recipient === recipient ? { ...n, read: true } : n) : { ...n, read: true }
-      )
-    );
-  };
+    if (!client.active) { // ✅ only activate if not already active
+      client.onConnect = () => {
+        console.log("✅ Connected to WebSocket");
+
+        client.subscribe("/topic/notifications", (message) => {
+          const notif: Notification = JSON.parse(message.body);
+          console.log("🔔 New notification received:", notif);
+          addNotification(notif);
+        });
+      };
+
+      client.onStompError = (frame) => {
+        console.error("❌ STOMP error:", frame.headers["message"], frame.body);
+      };
+
+      client.activate();
+    }
+
+    return () => {
+      isMounted = false;
+      // ❗ Don't deactivate on every re-render, only on full unmount
+      // client.deactivate();
+    };
+  }, [user?.id]); // ✅ only run when user.id changes
+
 
   return (
-    <NotificationContext.Provider value={{ notifications, addNotification, markAsRead, markAllAsRead }}>
+    <NotificationContext.Provider value={{ notifications, addNotification, markAllAsRead }}>
       {children}
     </NotificationContext.Provider>
   );

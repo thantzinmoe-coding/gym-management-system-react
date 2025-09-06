@@ -34,7 +34,7 @@ const trainerMenuItems = [
   { title: "View Members", url: "/trainer/members", icon: Users },
   { title: "View Equipment", url: "/trainer/equipment", icon: Dumbbell },
   { title: "View Packages", url: "/trainer/packages", icon: Package },
-  { title: "Chat with Members", url: "/trainer/chat", icon: MessageCircle },
+  { title: "Message", url: "/trainer/chat", icon: MessageCircle },
   { title: "View Notifications", url: "/trainer/notifications", icon: Bell },
 ];
 

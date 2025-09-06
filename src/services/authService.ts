@@ -23,6 +23,8 @@ export const authService = {
           role: currentUser.roleName.toLowerCase(),
           message: response.data.message
         }));
+        Cookies.set('token', response.data.data?.token || "", { expires: 1 });
+        Cookies.set('refreshToken', response.data.data?.refreshToken || "", { expires: 1 });
       }
 
       return response;

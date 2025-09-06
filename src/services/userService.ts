@@ -31,7 +31,7 @@ export const userService = {
                 height: data.height || 0,
                 goal: data.goal || '',
                 experience: data.experience || '',
-                specialCondition: data.specialCondition || '',
+                specialization: data.specialCondition || '',
                 entityId: data.entityId
             });
             return response.data;
