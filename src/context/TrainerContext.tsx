@@ -1,3 +1,4 @@
+import { trainerService } from "@/services/trainerService";
 import { createContext, useContext, useState, ReactNode } from "react";
 
 export interface Trainer {
@@ -9,10 +10,7 @@ export interface Trainer {
   experience?: number;
   rating?: number;
   totalClients?: number;
-  bio?: string;
-  certifications?: string[];
-  availability?: "available" | "busy" | "unavailable";
-  status?: "Active" | "Inactive";
+  status?: string;
   packages: Array<{
     id: string;
     name: string;
@@ -27,6 +25,7 @@ interface TrainerContextType {
   addTrainer: (trainer: Omit<Trainer, "id">) => void;
   updateTrainer: (id: string, trainer: Partial<Trainer>) => void;
   removeTrainer: (id: string) => void;
+  getAvailableTrainers: () => Promise<void>;
 }
 
 const TrainerContext = createContext<TrainerContextType | undefined>(undefined);
@@ -39,6 +38,12 @@ export const useTrainers = () => {
 
 export const TrainerProvider = ({ children }: { children: ReactNode }) => {
   const [trainers, setTrainers] = useState<Trainer[]>([]);
+
+
+  const getAvailableTrainers = async () => {
+    const data = await trainerService.getAllAvailableTrainers();
+    setTrainers(data.data);
+  }
 
   const addTrainer = (newTrainer: Omit<Trainer, "id">) => {
     const trainer: Trainer = { ...newTrainer, id: Date.now().toString() };
@@ -54,7 +59,7 @@ export const TrainerProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <TrainerContext.Provider value={{ trainers, addTrainer, updateTrainer, removeTrainer }}>
+    <TrainerContext.Provider value={{ trainers, addTrainer, updateTrainer, removeTrainer, getAvailableTrainers }}>
       {children}
     </TrainerContext.Provider>
   );

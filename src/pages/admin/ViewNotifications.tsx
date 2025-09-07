@@ -8,6 +8,7 @@ import { Check, X, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useTrainers } from '@/context/TrainerContext';
+import { trainerService } from '@/services/trainerService';
 
 export default function ViewNotifications() {
   const [trainerApplications, setTrainerApplications] = useState([]);
@@ -20,29 +21,50 @@ export default function ViewNotifications() {
 
   // Load applications
   useEffect(() => {
-    const storedTrainers = localStorage.getItem('trainerApplications');
-    if (storedTrainers) setTrainerApplications(JSON.parse(storedTrainers));
+    const fetchTrainerApplications = async () => {
+      try {
+        const res = await trainerService.getTrainerApplications();
+        console.log("Trainer Applications API:", res);
 
-    const storedMembers = localStorage.getItem('memberApplications');
-    if (storedMembers) setMemberApplications(JSON.parse(storedMembers));
-  }, []);
+        // handle both formats: {data: []} or []
+        if (Array.isArray(res)) {
+          setTrainerApplications(res);
+        } else if (res && Array.isArray(res.data)) {
+          setTrainerApplications(res.data);
+        } else {
+          console.error("Unexpected trainer applications format:", res);
+          setTrainerApplications([]);
+        }
+      } catch (error) {
+        console.error("Failed to fetch trainer applications:", error);
+        toast({
+          title: "Error fetching trainer applications",
+          description: "Failed to load trainer applications.",
+          variant: "destructive"
+        });
+      }
+    };
+
+    fetchTrainerApplications();
+  }, [toast]);
+
+
 
   // Status badge
   const getStatusBadge = (status) => {
-    const colors = { pending: 'bg-yellow-500', approved: 'bg-green-500', rejected: 'bg-red-500' };
+    const colors = { pending: 'bg-yellow-500', INACTIVE: 'bg-yellow-400', ACTIVE: 'bg-green-400', approved: 'bg-green-500', rejected: 'bg-red-500' };
     return <Badge className={colors[status]}>{status.charAt(0).toUpperCase() + status.slice(1)}</Badge>;
   };
 
   // --- Trainer Handlers ---
-  const updateTrainerStatus = (id, status) => {
-    const updated = trainerApplications.map(app => app.id === id ? { ...app, status } : app);
+  const updateTrainerStatus = async (id, status) => {
+    const updated = await trainerService.updateTrainerStatus(id, status);
     setTrainerApplications(updated);
-    localStorage.setItem('trainerApplications', JSON.stringify(updated));
   };
 
   const handleApproveTrainer = (app) => {
     addTrainer({
-      name: app.fullName,
+      name: app.name,
       email: app.email,
       phone: app.phone,
       specialization: [app.specialization || 'General'],
@@ -55,8 +77,8 @@ export default function ViewNotifications() {
       bio: '',
       certifications: []
     });
-    updateTrainerStatus(app.id, 'approved');
-    toast({ title: "Trainer Approved", description: `${app.fullName} has been approved.` });
+    updateTrainerStatus(app.id, 'ACTIVE');
+    toast({ title: "Trainer Approved", description: `${app.Name} has been approved.` });
   };
 
   const handleRejectTrainer = (app) => {
@@ -76,7 +98,7 @@ export default function ViewNotifications() {
     const approvedMembers = JSON.parse(localStorage.getItem('approvedMembers') || '[]');
     approvedMembers.push({
       id: app.id,
-      fullName: app.fullName,
+      fullName: app.name,
       email: app.email,
       phone: app.phone,
       packageName: app.packageName || '',
@@ -95,11 +117,11 @@ export default function ViewNotifications() {
   // --- Render Details ---
   const renderTrainerDetails = (app) => (
     <div className="space-y-2">
-      <p><strong>Full Name:</strong> {app.fullName}</p>
+      <p><strong>Full Name:</strong> {app.name}</p>
       <p><strong>Email:</strong> {app.email}</p>
       <p><strong>NRC:</strong> {app.nrc}</p>
       <p><strong>Phone:</strong> {app.phone}</p>
-      <p><strong>Date of Birth:</strong> {app.dateOfBirth}</p>
+      <p><strong>Date of Birth:</strong> {app.dob}</p>
       <p><strong>Gender:</strong> {app.gender}</p>
       <p><strong>Specialization:</strong> {app.specialization}</p>
       <p><strong>Experience (years):</strong> {app.experience}</p>
@@ -148,7 +170,7 @@ export default function ViewNotifications() {
               <TableBody>
                 {trainerApplications.map(app => (
                   <TableRow key={app.id}>
-                    <TableCell>{app.fullName}</TableCell>
+                    <TableCell>{app.name}</TableCell>
                     <TableCell>{app.email}</TableCell>
                     <TableCell>{app.phone}</TableCell>
                     <TableCell>{getStatusBadge(app.status)}</TableCell>
@@ -169,13 +191,10 @@ export default function ViewNotifications() {
                           {selectedTrainerApp && renderTrainerDetails(selectedTrainerApp)}
                         </DialogContent>
                       </Dialog>
-                      {app.status === 'pending' && (
+                      {app.status.toLowerCase() === 'inactive' && (
                         <>
                           <Button size="sm" variant="default" className="bg-green-600 hover:bg-green-700" onClick={() => handleApproveTrainer(app)}>
                             <Check className="h-4 w-4" />
-                          </Button>
-                          <Button size="sm" variant="destructive" onClick={() => handleRejectTrainer(app)}>
-                            <X className="h-4 w-4" />
                           </Button>
                         </>
                       )}
