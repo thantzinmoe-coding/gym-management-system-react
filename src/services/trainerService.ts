@@ -40,5 +40,27 @@ export const trainerService = {
             throw error.response?.data || { message: 'Failed to update trainer status' };
         }
     },
+
+    getTrainerApplications: async (role: string = "trainer", status: string = "inactive", page: number = 0, size: number = 20) => {
+        try {
+            const response = await api.get(
+                `${trainerUrl}/all-users?role=${role}&status=${status}&page=${page}&size=${size}`
+            );
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching trainer applications: ', error);
+            throw error.response?.data || { message: 'Failed to fetch trainer applications'};
+        }
+    },
+
+    getAllAvailableTrainers: async (page: number = 0, size: number = 20) => {
+        try {
+            const response = await api.get(`${trainerUrl}/all-available-trainers?page=${page}&size=${size}`);
+            return response.data; // Returns the entire data object
+        } catch (error) {
+            console.error('Error fetching available trainers:', error);
+            throw error.response?.data || { message: 'Failed to fetch available trainers' };
+        }
+    }
 };
 

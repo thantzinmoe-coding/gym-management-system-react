@@ -25,6 +25,7 @@ import { Edit } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { trainerService } from '@/services/trainerService';
+import Cookies from 'js-cookie';
 
 interface TrainerResponseDto {
   id: number;
@@ -34,7 +35,7 @@ interface TrainerResponseDto {
   status: string; // Changed to string
   specialization: string[];
   experience: number;
-  profilePhoto?: string;
+  avatarUrl?: string;
 }
 
 export default function ManageTrainers() {
@@ -69,6 +70,49 @@ export default function ManageTrainers() {
 
     fetchTrainers();
   }, [toast]);
+
+  useEffect(() => {
+    const fetchTrainerAvatars = async () => {
+      const token = Cookies.get('token');
+      if (!token || trainers.length === 0) return;
+
+      const newAvatars: Record<number, string> = {};
+
+      await Promise.all(
+        trainers.map(async (trainer) => {
+          // Only fetch if avatarUrl exists and is not already a blob URL
+          if (trainer.avatarUrl && !trainer.avatarUrl.startsWith('blob:')) {
+            try {
+              const response = await fetch(trainer.avatarUrl, {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              });
+              if (response.ok) {
+                const blob = await response.blob();
+                newAvatars[trainer.id] = URL.createObjectURL(blob);
+              } else {
+                console.error(`Failed to fetch avatar for trainer ${trainer.id}: ${response.statusText}`);
+              }
+            } catch (err) {
+              console.error(`Error fetching avatar for trainer ${trainer.id}:`, err);
+            }
+          }
+        })
+      );
+
+      setTrainers((prev) =>
+        prev.map((trainer) => ({
+          ...trainer,
+          avatarUrl: newAvatars[trainer.id] || trainer.avatarUrl,
+        }))
+      );
+    };
+
+    fetchTrainerAvatars();
+  }, [trainers.length]); // ← depend on length instead of full array
+
+
 
   // Open edit dialog for a trainer
   const handleEditTrainer = (trainer: TrainerResponseDto) => {
@@ -161,7 +205,7 @@ export default function ManageTrainers() {
                 {/* Trainer Info */}
                 <div className="flex items-center space-x-4">
                   <Avatar className="h-12 w-12">
-                    <AvatarImage src={trainer.profilePhoto || "/placeholder-avatar.jpg"} />
+                    <AvatarImage src={trainer.avatarUrl || "/placeholder-avatar.jpg"} />
                     <AvatarFallback className="text-lg">{trainer.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
                   </Avatar>
                   <div>
@@ -170,17 +214,17 @@ export default function ManageTrainers() {
                       <p>Email: {trainer.email}</p>
                       <p>Phone: {trainer.phone}</p>
                     </div>
+                    <Badge variant="outline">{trainer.experience} experience</Badge>
                     <div className="flex space-x-2 mt-1">
                       {trainer.specialization?.map((spec: string, i: number) => (
                         <Badge key={i} variant="outline">{spec}</Badge>
                       ))}
-                      <Badge variant="outline">{trainer.experience}</Badge>
                     </div>
                   </div>
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center space-x-2">
+                < div className="flex items-center space-x-2" >
                   {getStatusBadge(trainer.status)}
                   <Button variant="outline" size="sm" onClick={() => handleEditTrainer(trainer)}>
                     <Edit className="h-4 w-4" />
@@ -190,11 +234,11 @@ export default function ManageTrainers() {
             ))}
             {trainers.length === 0 && <p className="text-center text-gray-500 py-4">No trainers found.</p>}
           </div>
-        </CardContent>
-      </Card>
+        </CardContent >
+      </Card >
 
       {/* Edit Trainer Status Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+      < Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} >
         <DialogContent className="sm:max-w-lg sm:p-6 bg-white rounded-xl shadow-lg">
           <DialogHeader>
             <DialogTitle>Edit Trainer Status</DialogTitle>
@@ -215,7 +259,7 @@ export default function ManageTrainers() {
             </div>
           )}
         </DialogContent>
-      </Dialog>
-    </div>
+      </Dialog >
+    </div >
   );
 }
