@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'; 
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Edit, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -93,9 +93,9 @@ export default function ManageMembers() {
               {members.map(member => (
                 <TableRow key={member.id}>
                   <TableCell>
-                    <img 
-                      src={member.profilePicture || '/placeholder.png'} 
-                      alt={member.fullName} 
+                    <img
+                      src={member.profilePicture || '/placeholder.png'}
+                      alt={member.fullName}
                       className="w-10 h-10 rounded-full object-cover"
                     />
                   </TableCell>

@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { 
-  Users, 
-  UserCheck, 
-  Dumbbell, 
-  Bell, 
-  Package, 
+import {
+  Users,
+  UserCheck,
+  Dumbbell,
+  Bell,
+  File,
+  Package,
   DollarSign,
   LogOut,
   Home // ✅ Added for dashboard
@@ -32,7 +33,7 @@ const adminMenuItems = [
   { title: "Manage Members", url: "/admin/members", icon: Users },
   { title: "Manage Packages", url: "/admin/packages", icon: Package },
   { title: "Manage Equipment", url: "/admin/equipment", icon: Dumbbell },
-  { title: "View Notifications", url: "/admin/notifications", icon: Bell },
+  { title: "Applications", url: "/admin/notifications", icon: File },
   { title: "Send Notifications", url: "/admin/send-notification", icon: Bell },
   { title: "Pay Salary", url: "/admin/salary", icon: DollarSign },
 ];

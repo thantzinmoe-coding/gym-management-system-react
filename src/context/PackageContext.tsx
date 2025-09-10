@@ -2,7 +2,7 @@ import { gymPackageService } from "@/services/gymPackageService";
 import { createContext, useContext, useState, ReactNode } from "react";
 
 export interface Schedule {
-  id: number,
+  id?: number,
   day: string;
   startTime: string;
   endTime: string;
@@ -15,8 +15,10 @@ export interface Package {
   duration: string;
   description: string;
   gymPackageType: "PERSONAL" | "GROUP";
-  trainerID?: string;
+  trainerId?: string;
   trainerName?: string;
+  startDate?: string;
+  endDate?: string;
   schedules?: Schedule[];
   status?: "ACTIVE" | "INACTIVE";
 }

@@ -8,13 +8,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Edit, Trash2, Users, Package } from 'lucide-react';
+import { Plus, Edit, Trash2, Users } from 'lucide-react';
 import { useTrainers } from '@/context/TrainerContext';
 import { usePackages } from '@/context/PackageContext';
 import { gymPackageService } from '@/services/gymPackageService';
 import { assignedGymPackageService } from '@/services/assignedGymPackageService';
 import { scheduleService } from '@/services/scheduleService';
-import type { Schedule } from "@/context/PackageContext";
+import type { Package, Schedule } from "@/context/PackageContext";
 
 export default function ManagePackages() {
   const { trainers } = useTrainers();
@@ -32,6 +32,7 @@ export default function ManagePackages() {
     description: '',
     gymPackageType: 'PERSONAL',
     trainerId: '',
+    trainerName: '',
     startDate: '',
     endDate: ''
   });
@@ -53,6 +54,7 @@ export default function ManagePackages() {
       description: '',
       gymPackageType: 'PERSONAL',
       trainerId: '',
+      trainerName: '',
       startDate: '',
       endDate: ''
     });
@@ -150,6 +152,7 @@ export default function ManagePackages() {
       alert(error.message || "Failed to create package.");
     }
     getAllGymPackages();
+    getAvailableTrainers();
   };
 
 
@@ -170,6 +173,10 @@ export default function ManagePackages() {
 
       const response = await gymPackageService.updateGymPackage(editingPackage.id, updatedData);
       const updatedPackage = response?.data?.updatedGymPackage;
+
+      if (updatedPackage?.id) {
+        await assignedGymPackageService.updateAssignedSchedule(Number(newPackage.trainerId), updatedPackage.id);
+      }
 
       // 2️⃣ Sync schedules
       if (updatedPackage?.id) {
@@ -219,26 +226,32 @@ export default function ManagePackages() {
     }
 
     getAllGymPackages();
+    getAvailableTrainers();
   };
 
 
 
   const handleEditPackage = (pkg: any) => {
     setEditingPackage(pkg);
+
     setNewPackage({
       name: pkg.name,
       price: pkg.price?.toString() ?? '',
       duration: pkg.duration ?? '',
       description: pkg.description ?? '',
       gymPackageType: pkg.gymPackageType ?? 'personal',
-      trainerId: pkg.trainerId ? String(pkg.trainerId) : '',
+      trainerId: pkg.trainerId ? String(pkg.trainerId) : '', // ✅ use trainerId from backend
+      trainerName: pkg.trainerName ?? '', // ✅ keep trainer name
       startDate: pkg.startDate ?? '',
       endDate: pkg.endDate ?? ''
     });
+
     setSchedule(pkg.schedules ?? []);
     setStep(1);
     setIsDialogOpen(true);
   };
+
+
 
   const handleRemovePackage = async (id: number, status: string) => {
     if (status === 'ACTIVE') {
@@ -263,6 +276,7 @@ export default function ManagePackages() {
     }
 
     getAllGymPackages();
+    getAvailableTrainers();
   };
 
 
@@ -399,19 +413,28 @@ export default function ManagePackages() {
             <div className="mt-2">
               <Label className="text-muted-foreground">Select Trainer</Label>
               <Select
-                value={newPackage.trainerId}
+                value={newPackage.trainerId} // 👈 ensures default trainer is selected
                 onValueChange={(value) => {
-                  setNewPackage({ ...newPackage, trainerId: value });
+                  const selectedTrainer = trainers.find((t: any) => String(t.id) === value);
+                  setNewPackage({ ...newPackage, trainerId: value, trainerName: selectedTrainer?.name || '' });
                   setTimeout(() => setStep(3), 150);
                 }}
               >
-                <SelectTrigger className="bg-input text-foreground border-input"><SelectValue placeholder="Select trainer" /></SelectTrigger>
+                <SelectTrigger className="bg-input text-foreground border-input">
+                  <SelectValue placeholder="Select trainer">
+                    {newPackage.trainerName || "Select trainer"} {/* 👈 show assigned trainer name */}
+                  </SelectValue>
+                </SelectTrigger>
                 <SelectContent className="bg-input text-foreground border-input">
                   {(trainers ?? []).map((t: any) => (
-                    <SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>
+                    <SelectItem key={t.id} value={String(t.id)}>
+                      {t.name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+
+
               <div className="flex justify-between mt-4">
                 <Button onClick={() => setStep(1)} variant="secondary">Back</Button>
                 <div className="flex space-x-2">
@@ -495,7 +518,7 @@ export default function ManagePackages() {
         <Card className="bg-card text-card-foreground shadow-lg border border-border">
           <CardHeader className="flex justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Group Sessions</CardTitle>
-            <Package className="h-5 w-5 text-muted-foreground" />
+            {/* <Package className="h-5 w-5 text-muted-foreground" /> */}
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{groupPackages.length}</div>
@@ -555,17 +578,33 @@ function PackageList({ packages, onEdit, onRemove }: any) {
             </div>
           </div>
           <p className="text-sm text-muted-foreground mb-2">{pkg.description}</p>
-          <Badge className={`px-2 py-1 text-xs ${pkg.status === 'ACTIVE' ? 'bg-green-500 text-white' : 'bg-destructive text-destructive-foreground'}`}>{pkg.status === 'ACTIVE' ? 'In progress' : 'Upcoming'}</Badge>
+          <Badge className={`px-2 py-1 text-xs ${pkg.status === 'ACTIVE' ? 'bg-blue-500 text-white' : 'bg-green-500 text-white'}`}>{pkg.status === 'ACTIVE' ? 'In progress' : 'Upcoming'}</Badge>
           {pkg.startDate && pkg.endDate && (
-            <p className="text-xs text-muted-foreground mt-1">Duration: {pkg.startDate} → {pkg.endDate}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Duration: {new Date(pkg.startDate).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+              })}
+              → {new Date(pkg.endDate).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+              })}
+            </p>
           )}
+
           {pkg.schedules && pkg.schedules.length > 0 && (
             <div className="text-xs text-muted-foreground mt-1">
               {pkg.schedules.map((s: any) => (
-                <p key={s.day}>{s.day}: {s.startTime} - {s.endTime}</p>
+                <p key={s.day}>
+                  {s.day}: {new Date(`1970-01-01T${s.startTime}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                  - {new Date(`1970-01-01T${s.endTime}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                </p>
               ))}
             </div>
           )}
+
         </div>
       ))}
     </div>

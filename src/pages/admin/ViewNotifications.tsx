@@ -4,11 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Check, X, Eye } from 'lucide-react';
+import { Check, X, Eye, Phone } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useTrainers } from '@/context/TrainerContext';
 import { trainerService } from '@/services/trainerService';
+import { superAdminService } from '@/services/adminService';
 
 export default function ViewNotifications() {
   const [trainerApplications, setTrainerApplications] = useState([]);
@@ -19,36 +20,71 @@ export default function ViewNotifications() {
   const { toast } = useToast();
   const { addTrainer } = useTrainers();
 
-  // Load applications
-  useEffect(() => {
-    const fetchTrainerApplications = async () => {
-      try {
-        const res = await trainerService.getTrainerApplications();
-        console.log("Trainer Applications API:", res);
+  const fetchTrainerApplications = async () => {
+    try {
+      const res = await trainerService.getTrainerApplications();
+      console.log("Trainer Applications API:", res);
 
-        // handle both formats: {data: []} or []
-        if (Array.isArray(res)) {
-          setTrainerApplications(res);
-        } else if (res && Array.isArray(res.data)) {
-          setTrainerApplications(res.data);
-        } else {
-          console.error("Unexpected trainer applications format:", res);
-          setTrainerApplications([]);
-        }
-      } catch (error) {
-        console.error("Failed to fetch trainer applications:", error);
-        toast({
-          title: "Error fetching trainer applications",
-          description: "Failed to load trainer applications.",
-          variant: "destructive"
-        });
+      // handle both formats: {data: []} or []
+      if (Array.isArray(res)) {
+        setTrainerApplications(res);
+      } else if (res && Array.isArray(res.data)) {
+        setTrainerApplications(res.data);
+      } else {
+        console.error("Unexpected trainer applications format:", res);
+        setTrainerApplications([]);
       }
-    };
+    } catch (error) {
+      console.error("Failed to fetch trainer applications:", error);
+      toast({
+        title: "Error fetching trainer applications",
+        description: "Failed to load trainer applications.",
+        variant: "destructive"
+      });
+    }
+  };
+  // Load applications
 
+  const fetchMemberApplications = async () => {
+    try {
+      const res = await superAdminService.getAllBookings({});
+      console.log("Member Applications API:", res);
+
+      if (res && Array.isArray(res.data)) {
+        const mapped = res.data.map((app) => ({
+          id: app.bookingId,
+          fullName: app.memberName,
+          email: app.memberEmail || "",   // backend doesn’t send yet
+          phone: app.memberPhone || "",   // backend doesn’t send yet
+          bookingId: app.bookingId || 0,
+          packageName: app.gymPackageName,
+          status: app.memberStatus.toLowerCase(), // ACTIVE, PENDING
+          Phone: app.phone || "",
+          nrc: app.nrc || "",
+          dob: app.dob || "",
+          gender: app.gender || "",
+          weight: app.weight || "",
+          height: app.height || "",
+          address: app.address || "",
+          goal: app.goal || "",   // changed from fitnessGoals to goal
+        }));
+        setMemberApplications(mapped);
+      } else {
+        setMemberApplications([]);
+      }
+    } catch (error) {
+      console.error("Failed to fetch member applications:", error);
+      toast({
+        title: "Error fetching member applications",
+        description: "Failed to load member booking requests.",
+        variant: "destructive",
+      });
+    }
+  };
+  useEffect(() => {
     fetchTrainerApplications();
-  }, [toast]);
-
-
+    fetchMemberApplications();
+  }, []);
 
   // Status badge
   const getStatusBadge = (status) => {
@@ -56,10 +92,16 @@ export default function ViewNotifications() {
     return <Badge className={colors[status]}>{status.charAt(0).toUpperCase() + status.slice(1)}</Badge>;
   };
 
-  // --- Trainer Handlers ---
-  const updateTrainerStatus = async (id, status) => {
-    const updated = await trainerService.updateTrainerStatus(id, status);
-    setTrainerApplications(updated);
+
+  const acceptTrainerApplication = async (trainerId) => {
+    try {
+      await trainerService.acceptTrainerApplication(trainerId);
+      toast({ title: "Trainer Accepted", description: "Trainer application accepted." });
+      fetchTrainerApplications();
+    } catch (error) {
+      console.error("Error accepting trainer application:", error);
+      throw error;
+    }
   };
 
   const handleApproveTrainer = (app) => {
@@ -69,62 +111,74 @@ export default function ViewNotifications() {
       phone: app.phone,
       specialization: [app.specialization || 'General'],
       experience: app.experience || 2,
-      availability: 'available',
       rating: 0,
       totalClients: 0,
       packages: [],
       status: 'Active',
-      bio: '',
-      certifications: []
     });
-    updateTrainerStatus(app.id, 'ACTIVE');
-    toast({ title: "Trainer Approved", description: `${app.Name} has been approved.` });
+
+    acceptTrainerApplication(app.id);
+
   };
 
-  const handleRejectTrainer = (app) => {
-    updateTrainerStatus(app.id, 'rejected');
-    toast({ title: "Application Rejected", description: `${app.fullName}'s application rejected.`, variant: "destructive" });
+  const rejectTrainer = async (trainerId) => {
+    try {
+      await superAdminService.rejectTrainer(trainerId);
+      toast({ title: "Trainer Rejected", description: "Trainer application rejected." });
+      fetchTrainerApplications();
+    } catch (error) {
+      console.error("Error rejecting trainer application:", error);
+      throw error;
+    }
   };
 
-  // --- Member Handlers ---
-  const updateMemberStatus = (id, status) => {
-    const updated = memberApplications.map(app => app.id === id ? { ...app, status } : app);
-    setMemberApplications(updated);
-    localStorage.setItem('memberApplications', JSON.stringify(updated));
+  const approveMember = async (id) => {
+    try {
+      const res = await superAdminService.approveMemberBooking(id);
+      console.log("Approve Member Response:", res);
+      toast({ title: "Booking Approved", description: `${res?.data?.AcceptedBookingResponse?.memberId} booking approved.` });
+      fetchMemberApplications();
+    } catch (error) {
+      console.error("Error approving member booking:", error);
+      throw error;
+    }
+  };
+
+  const rejectMember = async (id, email, packageName, name) => {
+    try {
+      const res = await superAdminService.rejectMemberBooking(id, email, packageName, name);
+      console.log("Reject Member Response:", res);
+      toast({ title: "Booking Rejected", description: "Member booking rejected." });
+      fetchMemberApplications();
+    } catch (error) {
+      console.error("Error rejecting member booking:", error);
+      throw error;
+    }
   };
 
   const handleApproveMember = (app) => {
-    updateMemberStatus(app.id, 'approved');
-    const approvedMembers = JSON.parse(localStorage.getItem('approvedMembers') || '[]');
-    approvedMembers.push({
-      id: app.id,
-      fullName: app.name,
-      email: app.email,
-      phone: app.phone,
-      packageName: app.packageName || '',
-      status: 'active',
-      joinDate: new Date().toISOString().split('T')[0]
-    });
-    localStorage.setItem('approvedMembers', JSON.stringify(approvedMembers));
-    toast({ title: "Member Approved", description: `${app.fullName}'s booking approved.` });
+    approveMember(app.bookingId);
   };
 
   const handleRejectMember = (app) => {
-    updateMemberStatus(app.id, 'rejected');
-    toast({ title: "Booking Rejected", description: `${app.fullName}'s booking rejected.`, variant: "destructive" });
+    rejectMember(app.bookingId, app.email, app.packageName, app.fullName);
+  };
+
+  const handleRejectTrainer = (app) => {
+    rejectTrainer(app.id);
   };
 
   // --- Render Details ---
   const renderTrainerDetails = (app) => (
     <div className="space-y-2">
-      <p><strong>Full Name:</strong> {app.name}</p>
-      <p><strong>Email:</strong> {app.email}</p>
-      <p><strong>NRC:</strong> {app.nrc}</p>
-      <p><strong>Phone:</strong> {app.phone}</p>
-      <p><strong>Date of Birth:</strong> {app.dob}</p>
-      <p><strong>Gender:</strong> {app.gender}</p>
-      <p><strong>Specialization:</strong> {app.specialization}</p>
-      <p><strong>Experience (years):</strong> {app.experience}</p>
+      <p><strong>Full Name:</strong> {app.name || "N/A"}</p>
+      <p><strong>Email:</strong> {app.email || "N/A"}</p>
+      <p><strong>NRC:</strong> {app.nrc || "N/A"}</p>
+      <p><strong>Phone:</strong> {app.phone || "N/A"}</p>
+      <p><strong>Date of Birth:</strong> {app.dob || "N/A"}</p>
+      <p><strong>Gender:</strong> {app.gender || "N/A"}</p>
+      <p><strong>Specialization:</strong> {app.specialization || "N/A"}</p>
+      <p><strong>Experience (years):</strong> {app.experience || "N/A"}</p>
     </div>
   );
 
@@ -133,13 +187,13 @@ export default function ViewNotifications() {
       <p><strong>Full Name:</strong> {app.fullName}</p>
       <p><strong>Email:</strong> {app.email}</p>
       <p><strong>NRC:</strong> {app.nrc}</p>
-      <p><strong>Phone:</strong> {app.phone}</p>
-      <p><strong>Date of Birth:</strong> {app.dateOfBirth}</p>
+      <p><strong>Phone:</strong> {app.Phone}</p>
+      <p><strong>Date of Birth:</strong> {app.dob}</p>
       <p><strong>Gender:</strong> {app.gender}</p>
       <p><strong>Weight (kg):</strong> {app.weight}</p>
       <p><strong>Height (cm):</strong> {app.height}</p>
       <p><strong>Address:</strong> {app.address}</p>
-      <p><strong>Fitness Goals:</strong> {app.fitnessGoals}</p>
+      <p><strong>Fitness Goals:</strong> {app.goal}</p>
       <p><strong>Package:</strong> {app.packageName}</p>
     </div>
   );
@@ -191,10 +245,14 @@ export default function ViewNotifications() {
                           {selectedTrainerApp && renderTrainerDetails(selectedTrainerApp)}
                         </DialogContent>
                       </Dialog>
-                      {app.status.toLowerCase() === 'inactive' && (
+                      {app.status.toLowerCase() === 'pending' && (
                         <>
                           <Button size="sm" variant="default" className="bg-green-600 hover:bg-green-700" onClick={() => handleApproveTrainer(app)}>
                             <Check className="h-4 w-4" />
+                          </Button>
+
+                          <Button size="sm" variant="destructive" onClick={() => handleRejectTrainer(app)}>
+                            <X className="h-4 w-4" />
                           </Button>
                         </>
                       )}
@@ -207,7 +265,6 @@ export default function ViewNotifications() {
           </CardContent>
         </Card>
       </div>
-
       {/* Member Applications */}
       <div className="space-y-6">
         <h1 className="text-2xl font-bold">Member Applications</h1>

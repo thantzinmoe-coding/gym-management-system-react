@@ -63,17 +63,19 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             <SidebarTrigger />
 
             <div className="flex items-center space-x-4">
-              <div className="relative">
-                <Bell
-                  className="h-6 w-6 text-gray-700 cursor-pointer"
-                  onClick={handleNotificationClick}
-                />
-                {notificationCount > 0 && (
-                  <span className="absolute -top-1 -right-1 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-600 rounded-full">
-                    {notificationCount}
-                  </span>
-                )}
-              </div>
+              {(user?.role === 'trainer' || user?.role === 'member') && (
+                <div className="relative">
+                  <Bell
+                    className="h-6 w-6 text-gray-700 cursor-pointer"
+                    onClick={handleNotificationClick}
+                  />
+                  {notificationCount > 0 && (
+                    <span className="absolute -top-1 -right-1 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-600 rounded-full">
+                      {notificationCount}
+                    </span>
+                  )}
+                </div>
+              )}
 
               <span className="text-sm text-muted-foreground">Welcome, {user?.name}</span>
               <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium">
