@@ -359,197 +359,116 @@ export default function ManageUser() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Profile</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead>Role</TableHead> {/* Will show MEMBER */}
-                  <TableHead>User Status</TableHead> {/* Derived status (Active/Inactive based on booking) */}
-                  <TableHead>Member Status</TableHead> {/* Member's actual booking status */}
-                  <TableHead>Package</TableHead>
-                  <TableHead>Booked</TableHead> {/* Visually indicates booking */}
-                  <TableHead>Actions</TableHead>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Profile</TableHead>
+                <TableHead>Full Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Phone</TableHead>
+                <TableHead>Package</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Join Date</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {members.map(member => (
+                <TableRow key={member.id}>
+                  <TableCell>
+                    <img
+                      src={member.profilePicture || '/placeholder.png'}
+                      alt={member.fullName}
+                      className="w-10 h-10 rounded-full object-cover"
+                    />
+                  </TableCell>
+                  <TableCell>{member.fullName}</TableCell>
+                  <TableCell>{member.email}</TableCell>
+                  <TableCell>{member.phone}</TableCell>
+                  <TableCell>{member.packageName}</TableCell>
+                  <TableCell>{getStatusBadge(member.status)}</TableCell>
+                  <TableCell>{member.joinDate}</TableCell>
+                  <TableCell className="flex space-x-2">
+                    {/* Edit Action */}
+                    <Button size="sm" variant="outline" onClick={() => { setSelectedMember(member); setIsEditDialogOpen(true); }}>
+                      <Edit className="h-4 w-4" />
+                    </Button>
+
+                    {/* View Action */}
+                    <Button size="sm" variant="outline" onClick={() => { setSelectedMember(member); setIsViewDialogOpen(true); }}>
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {usersToDisplay.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell>
-                      <img
-                        src={user.avatarUrl}
-                        alt={user.name}
-                        className="w-10 h-10 rounded-full object-cover border-2 border-gray-200"
-                        onError={(e) => { // Handle broken image links
-                          (e.target as HTMLImageElement).src = '/placeholder.png';
-                        }}
-                      />
-                    </TableCell>
-                    <TableCell className="font-medium">{user.name}</TableCell>
-                    <TableCell>{user.email}</TableCell>
-                    <TableCell>{user.phone}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{user.role}</Badge> {/* Will likely always show MEMBER */}
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge status={user.status} /> {/* This badge now shows 'Active' or 'Inactive' based on booking status */}
-                    </TableCell>
-                    <TableCell>{user.memberStatus}</TableCell> {/* Member's actual booking status */}
-                    <TableCell>{user.packageName}</TableCell>
-                    <TableCell>
-                      {/* Display Booked status */}
-                      <Badge variant={user.isBooked ? "default" : "outline"} className={user.isBooked ? "bg-green-500 text-white" : ""}>
-                        {user.isBooked ? "Yes" : "No"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {/* View Details Dialog */}
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setSelectedUser(user)} // Set selected user for details view
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent className="max-w-2xl">
-                            <DialogHeader>
-                              <DialogTitle>Member Details</DialogTitle>
-                            </DialogHeader>
-                            {selectedUser && (
-                              <div className="grid grid-cols-2 gap-4 py-4">
-                                {/* Left Column Details */}
-                                <div className="space-y-3">
-                                  <div>
-                                    <label className="text-sm font-medium text-gray-500">Name</label>
-                                    <p className="text-sm">{selectedUser.name}</p>
-                                  </div>
-                                  <div>
-                                    <label className="text-sm font-medium text-gray-500">Email</label>
-                                    <p className="text-sm">{selectedUser.email}</p>
-                                  </div>
-                                  <div>
-                                    <label className="text-sm font-medium text-gray-500">Phone</label>
-                                    <p className="text-sm">{selectedUser.phone}</p>
-                                  </div>
-                                  <div>
-                                    <label className="text-sm font-medium text-gray-500">NRC</label>
-                                    <p className="text-sm">{selectedUser.nrc}</p>
-                                  </div>
-                                  <div>
-                                    <label className="text-sm font-medium text-gray-500">Date of Birth</label>
-                                    <p className="text-sm">{selectedUser.dob}</p>
-                                  </div>
-                                </div>
-                                {/* Right Column Details */}
-                                <div className="space-y-3">
-                                  <div>
-                                    <label className="text-sm font-medium text-gray-500">Gender</label>
-                                    <p className="text-sm">{selectedUser.gender}</p>
-                                  </div>
-                                  <div>
-                                    <label className="text-sm font-medium text-gray-500">Address</label>
-                                    <p className="text-sm">{selectedUser.address}</p>
-                                  </div>
-                                  <div>
-                                    <label className="text-sm font-medium text-gray-500">Role</label>
-                                    <p className="text-sm">{selectedUser.role}</p> {/* Will show MEMBER */}
-                                  </div>
-                                  <div>
-                                    <label className="text-sm font-medium text-gray-500">Specialization</label>
-                                    <p className="text-sm">{selectedUser.specialization}</p>
-                                  </div>
-                                  <div>
-                                    <label className="text-sm font-medium text-gray-500">Experience</label>
-                                    <p className="text-sm">{selectedUser.experience}</p>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-                          </DialogContent>
-                        </Dialog>
-
-                        {/* Delete Member AlertDialog */}
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete Member</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Are you sure you want to delete {user.name}? This action cannot be undone.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => handleDeleteUser(user.id, user.name)}
-                                className="bg-red-600 hover:bg-red-700" // Red button for delete action
-                              >
-                                Delete
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-
-          {/* Empty State: Shown when no users are found after filtering */}
-          {!loading && usersToDisplay.length === 0 && (
-            <div className="text-center py-8">
-              <p className="text-gray-500">No members found matching your criteria.</p>
-            </div>
-          )}
-
-          {/* Loading State: Shown while data is being fetched */}
-          {loading && (
-            <div className="text-center py-8">
-              <div className="flex items-center justify-center gap-2">
-                <RefreshCw className="h-4 w-4 animate-spin" />
-                <p className="text-gray-500">Loading members...</p>
-              </div>
-            </div>
-          )}
-
-          {/* Pagination Controls */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between mt-6">
-              <p className="text-sm text-gray-600">
-                Showing page {currentPage} of {totalPages} ({totalItems} total members)
-              </p>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} // Decrement page, ensure it's at least 1
-                  disabled={currentPage <= 1 || loading} // Disable if on first page or loading
-                >
-                  Previous
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))} // Increment page, ensure it's not past totalPages
-                  disabled={currentPage >= totalPages || loading} // Disable if on last page or loading
-                >
-                  Next
-                </Button>
-              </div>
-            </div>
-          )}
+              ))}
+            </TableBody>
+          </Table>
+          {members.length === 0 && <p className="text-center py-4 text-gray-500">No approved members found.</p>}
         </CardContent>
+      </Card>
+
+      {/* Edit Member Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-lg sm:p-6 bg-white rounded-xl shadow-lg">
+          <DialogHeader>
+            <DialogTitle>Edit Member Status</DialogTitle>
+          </DialogHeader>
+          {selectedMember && (
+            <div className="grid grid-cols-1 gap-4 mt-2">
+              <div className="flex items-center space-x-4">
+                <img
+                  src={selectedMember.profilePicture || '/placeholder.png'}
+                  alt={selectedMember.fullName}
+                  className="w-20 h-20 rounded-full object-cover"
+                />
+                <div>
+                  <p className="font-medium">{selectedMember.fullName}</p>
+                  <p className="text-gray-500 text-sm">{selectedMember.email}</p>
+                </div>
+              </div>
+
+              {/* Empty State: Shown when no users are found after filtering */}
+              {!loading && usersToDisplay.length === 0 && (
+                <div className="text-center py-8">
+                  <p className="text-gray-500">No members found matching your criteria.</p>
+                </div>
+              )}
+
+              {/* Loading State: Shown while data is being fetched */}
+              {loading && (
+                <div className="text-center py-8">
+                  <div className="flex items-center justify-center gap-2">
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    <p className="text-gray-500">Loading members...</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between mt-6">
+                  <p className="text-sm text-gray-600">
+                    Showing page {currentPage} of {totalPages} ({totalItems} total members)
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} // Decrement page, ensure it's at least 1
+                      disabled={currentPage <= 1 || loading} // Disable if on first page or loading
+                    >
+                      Previous
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))} // Increment page, ensure it's not past totalPages
+                      disabled={currentPage >= totalPages || loading} // Disable if on last page or loading
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </CardContent>
       </Card>
     </div>
   );

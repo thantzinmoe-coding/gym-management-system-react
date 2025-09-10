@@ -32,7 +32,7 @@ const memberMenuItems = [
   { title: "Manage Profile", url: "/member/profile", icon: User },
   { title: "View Trainers", url: "/member/trainers", icon: Users },
   { title: "View Equipment", url: "/member/equipment", icon: Dumbbell },
-  { title: "Chat with Trainers", url: "/member/chat", icon: MessageCircle },
+  { title: "Message", url: "/member/chat", icon: MessageCircle },
   { title: "Give Feedback", url: "/member/feedback", icon: Star },
   { title: "View Notifications", url: "/member/notifications", icon: Bell },
 ];

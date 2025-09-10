@@ -31,9 +31,7 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
 
   const markAllAsRead = async () => {
     try {
-      const toMark = notifications.filter((n) => !n.read);
-
-      await Promise.all(toMark.map((n) => notificationService.markAsRead(n.id)));
+      const markAsRead = await notificationService.markAllAsRead(user.id);
 
       setNotifications((prev) =>
         prev.map((n) => ({ ...n, read: true }))

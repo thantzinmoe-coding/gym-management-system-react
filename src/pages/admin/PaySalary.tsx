@@ -1,289 +1,296 @@
-import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { DollarSign, Calendar, Check, Clock, Search } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { useEffect, useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  DollarSign,
+  Calendar,
+  Check,
+  Clock,
+  Search,
+  History, // NEW: Using History icon for the button
+} from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useTrainers } from "@/context/TrainerContext";
+import { salaryService } from "@/services/salaryService";
 
 export default function PaySalary() {
   const { toast } = useToast();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedMonth, setSelectedMonth] = useState('');
+  const { trainers, getAllTrainers } = useTrainers();
+  const [searchTerm, setSearchTerm] = useState("");
   const [isPayDialogOpen, setIsPayDialogOpen] = useState(false);
-  const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
+  const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false); // NEW state for history dialog
+  const [selectedTrainer, setSelectedTrainer] = useState<any>(null);
+  const [totalHours, setTotalHours] = useState<Record<string, number>>({});
+  // NEW: Store all salary records from the API in a single array
+  const [allSalaries, setAllSalaries] = useState<any[]>([]);
+  // NEW: State to hold the history for the selected trainer
+  const [trainerPaymentHistory, setTrainerPaymentHistory] = useState<any[]>([]);
 
-  const [employees, setEmployees] = useState([
-    { 
-      id: 1, 
-      name: 'Alex Johnson', 
-      role: 'Trainer',
-      baseSalary: 3500,
-      bonus: 200,
-      deductions: 50,
-      netSalary: 3650,
-      status: 'Pending',
-      lastPaid: '2023-12-15'
-    },
-    { 
-      id: 2, 
-      name: 'Maria Garcia', 
-      role: 'Trainer',
-      baseSalary: 3200,
-      bonus: 150,
-      deductions: 30,
-      netSalary: 3320,
-      status: 'Paid',
-      lastPaid: '2024-01-15'
-    },
-    { 
-      id: 3, 
-      name: 'Chris Wilson', 
-      role: 'Trainer',
-      baseSalary: 3800,
-      bonus: 300,
-      deductions: 75,
-      netSalary: 4025,
-      status: 'Pending',
-      lastPaid: '2023-12-15'
-    },
-    { 
-      id: 4, 
-      name: 'Sarah Admin', 
-      role: 'Administrator',
-      baseSalary: 4500,
-      bonus: 500,
-      deductions: 100,
-      netSalary: 4900,
-      status: 'Paid',
-      lastPaid: '2024-01-15'
-    },
-    { 
-      id: 5, 
-      name: 'Mike Receptionist', 
-      role: 'Receptionist',
-      baseSalary: 2800,
-      bonus: 100,
-      deductions: 40,
-      netSalary: 2860,
-      status: 'Pending',
-      lastPaid: '2023-12-15'
-    },
-  ]);
+  const hourlyRates: Record<string, number> = {
+    Trainer: 20,
+    Administrator: 30,
+    Receptionist: 15,
+  };
 
-  const filteredEmployees = employees.filter(employee =>
-    employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    employee.role.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Fetch trainers (no change)
+  useEffect(() => {
+    getAllTrainers();
+  }, []);
 
-  const handlePaySalary = () => {
-    if (selectedEmployee) {
-      setEmployees(employees.map(emp => 
-        emp.id === selectedEmployee.id 
-          ? { ...emp, status: 'Paid', lastPaid: new Date().toISOString().split('T')[0] }
-          : emp
-      ));
+  // MODIFIED: Fetch all salary records (paid and pending) and store them.
+  useEffect(() => {
+    const fetchAllSalaries = async () => {
+      try {
+        const res = await salaryService.getAllSalaries();
+        setAllSalaries(Array.isArray(res) ? res : []);
+      } catch (err) {
+        console.error("Error fetching salaries:", err);
+        toast({ title: "Error", description: "Failed to fetch salary data.", variant: "destructive" });
+      }
+    };
+    fetchAllSalaries();
+  }, [toast]); // We can add a dependency later to refetch if needed
+
+  // Fetch trainers' work hours (no change)
+  useEffect(() => {
+    trainers.forEach(async (trainer) => {
+      try {
+        const res = await salaryService.getTotalHoursWorkedByTrainer(Number(trainer.id));
+        setTotalHours((prev) => ({ ...prev, [trainer.id]: res.data.totalHoursWorked || 0 }));
+      } catch (err) {
+        console.error(`Error fetching hours for trainer ${trainer.id}:`, err);
+        setTotalHours((prev) => ({ ...prev, [trainer.id]: 0 }));
+      }
+    });
+  }, [trainers]);
+
+  const calculateSalary = (trainer: any) => {
+    const hoursWorked = totalHours[trainer.id] || 0;
+    const rate = hourlyRates[trainer.role] || hourlyRates["Trainer"];
+    return hoursWorked * rate;
+  };
+
+  // MODIFIED: Handle payment by UPDATING the existing pending record
+  const handlePaySalary = async () => {
+    if (!selectedTrainer) return;
+
+    // Find the current month's PENDING salary record for this trainer
+    const currentSalaryRecord = allSalaries.find(s =>
+      s.trainerId.toString() === selectedTrainer.id.toString() &&
+      s.status === "PENDING"
+      // Note: For robustness, you could also match by month/year if the backend guarantees one record per month
+    );
+
+    if (!currentSalaryRecord) {
+      toast({ title: "Error", description: "No pending salary record found for this trainer.", variant: "destructive" });
+      return;
+    }
+
+    const hoursWorked = totalHours[selectedTrainer.id] || 0;
+    const rate = hourlyRates[selectedTrainer.role] || hourlyRates["Trainer"];
+    const calculatedSalary = hoursWorked * rate;
+
+    try {
+      // Use updateSalary with the ID of the pending record
+      const response = await salaryService.updateSalary(currentSalaryRecord.id, {
+        amount: calculatedSalary,
+        notes: `Paid on ${new Date().toLocaleDateString()} (${hoursWorked} hrs @ $${rate}/hr)`,
+        trainerId: Number(selectedTrainer.id),
+      });
+
+      // Update the local state to reflect the change immediately
+      setAllSalaries(prev => prev.map(s => s.id === response.id ? response : s));
+
       toast({
         title: "Salary Paid",
-        description: `Salary of $${selectedEmployee.netSalary} paid to ${selectedEmployee.name}`,
+        description: `Salary of $${calculatedSalary.toLocaleString()} paid to ${selectedTrainer.name}`,
       });
+
       setIsPayDialogOpen(false);
-      setSelectedEmployee(null);
+      setSelectedTrainer(null);
+    } catch (err: any) {
+      console.error(`Error paying salary for ${selectedTrainer.name}:`, err);
+      toast({ title: "Error", description: err.message || "Failed to pay salary", variant: "destructive" });
     }
   };
 
-  const totalPending = employees.filter(e => e.status === 'Pending').reduce((sum, e) => sum + e.netSalary, 0);
-  const totalPaid = employees.filter(e => e.status === 'Paid').reduce((sum, e) => sum + e.netSalary, 0);
+  // NEW HELPER: Get salary details for a specific trainer for display
+  const getTrainerSalaryInfo = (trainerId: string) => {
+    const now = new Date(); // Current date is September 10, 2025
+    const currentMonth = now.getMonth() + 1; // 9 for September
+    const currentYear = now.getFullYear(); // 2025
+
+    console.log("All Salaries:", allSalaries);
+    console.log("Looking for Trainer ID:", trainerId, "for Month:", currentMonth, "Year:", currentYear);
+
+    // Find the salary record for the current month and year
+    const currentRecord = allSalaries.find(s =>
+      s.trainerId === trainerId &&
+      s.salaryMonth === currentMonth &&
+      s.salaryYear === currentYear
+    );
+
+    console.log("Current Record for Trainer ID", trainerId, ":", currentRecord);
+
+    // Find the most recent PAID salary record to determine the "Last Paid" date
+    const paidSalaries = allSalaries
+      .filter(s => s.trainerId.toString() === trainerId && s.status === "PAID")
+      .sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime());
+
+    console.log("Paid Salaries for Trainer ID", trainerId, ":", paidSalaries);
+    return {
+      status: currentRecord?.status || "PENDING", // Default to PENDING if no record is found for this month yet
+      lastPaid: paidSalaries.length > 0 ? paidSalaries[0].paymentDate : "N/A",
+    };
+  };
+
+  // NEW HELPER: Open the history dialog for a trainer
+  const openHistoryDialog = (trainer: any) => {
+    const history = allSalaries
+      .filter(s => s.trainerId.toString() === trainer.id.toString() && s.status === "PAID")
+      .sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime());
+    setTrainerPaymentHistory(history);
+    setSelectedTrainer(trainer);
+    setIsHistoryDialogOpen(true);
+  };
+
+  const filteredTrainers = trainers.filter(trainer =>
+    trainer.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Pay Salary</h1>
-          <p className="text-muted-foreground">Manage employee salary payments</p>
-        </div>
-        <div className="flex space-x-2">
-          <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="Select Month" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="2024-01">January 2024</SelectItem>
-              <SelectItem value="2023-12">December 2023</SelectItem>
-              <SelectItem value="2023-11">November 2023</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button>Generate Report</Button>
-        </div>
-      </div>
+      {/* ... (Header and Summary Cards sections remain the same) ... */}
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Employees</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-primary">{employees.length}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Payments</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">
-              ${totalPending.toLocaleString()}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {employees.filter(e => e.status === 'Pending').length} employees
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Paid This Month</CardTitle>
-            <Check className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              ${totalPaid.toLocaleString()}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {employees.filter(e => e.status === 'Paid').length} employees
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Payroll</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-primary">
-              ${(totalPending + totalPaid).toLocaleString()}
-            </div>
-            <p className="text-xs text-muted-foreground">This month</p>
-          </CardContent>
-        </Card>
-      </div>
-
+      {/* Trainer Salary List */}
       <Card>
         <CardHeader>
-          <CardTitle>Employee Salary Management</CardTitle>
-          <CardDescription>Process salary payments for employees</CardDescription>
-          <div className="flex items-center space-x-2">
-            <Search className="h-4 w-4 text-muted-foreground" />
+          <CardTitle>Trainer Salary Management</CardTitle>
+          <CardDescription>
+            Process salary payments for the current month: September 2025
+          </CardDescription>
+          <div className="relative pt-2">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search employees..."
+              placeholder="Search trainers..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-sm"
+              className="max-w-sm pl-8"
             />
           </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {filteredEmployees.map((employee) => (
-              <div key={employee.id} className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-                <div className="flex items-center space-x-4">
-                  <div className="h-12 w-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-lg font-medium">
-                    {employee.name.split(' ').map(n => n[0]).join('')}
-                  </div>
-                  <div>
-                    <p className="font-medium text-foreground">{employee.name}</p>
-                    <p className="text-sm text-muted-foreground">{employee.role}</p>
-                    <p className="text-xs text-muted-foreground">Last paid: {employee.lastPaid}</p>
-                  </div>
-                </div>
-                
-                <div className="text-right">
-                  <div className="grid grid-cols-4 gap-4 text-sm">
-                    <div>
-                      <p className="text-muted-foreground">Base</p>
-                      <p className="font-medium">${employee.baseSalary}</p>
+            {filteredTrainers.map((trainer) => {
+              const hoursWorked = totalHours[trainer.id] || 0;
+              const calculatedSalary = calculateSalary(trainer);
+              const salaryInfo = getTrainerSalaryInfo(trainer.id);
+
+              return (
+                <div key={trainer.id} className="flex flex-wrap items-center justify-between gap-4 p-4 bg-muted/50 rounded-lg">
+                  {/* Trainer Info */}
+                  <div className="flex items-center space-x-4">
+                    <div className="h-12 w-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-lg font-medium">
+                      {trainer.name.split(" ").map((n: string) => n[0]).join("")}
                     </div>
                     <div>
-                      <p className="text-muted-foreground">Bonus</p>
-                      <p className="font-medium text-green-600">+${employee.bonus}</p>
+                      <p className="font-medium text-foreground">{trainer.name}</p>
+                      <p className="text-sm text-muted-foreground">{trainer.role || "Trainer"}</p>
+                      <p className="text-xs text-muted-foreground">Last paid: {salaryInfo.lastPaid}</p>
                     </div>
+                  </div>
+
+                  {/* Salary Details */}
+                  <div className="flex items-center gap-6 text-sm text-right">
                     <div>
-                      <p className="text-muted-foreground">Deductions</p>
-                      <p className="font-medium text-red-600">-${employee.deductions}</p>
+                      <p className="text-muted-foreground">Hours Worked</p>
+                      <p className="font-medium">{hoursWorked} hrs</p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Net Salary</p>
-                      <p className="font-bold text-primary">${employee.netSalary}</p>
+                      <p className="font-bold text-lg text-primary">${calculatedSalary.toLocaleString()}</p>
                     </div>
                   </div>
-                </div>
-                
-                <div className="flex items-center space-x-2">
-                  <Badge variant={employee.status === 'Paid' ? 'default' : 'destructive'}>
-                    {employee.status}
-                  </Badge>
-                  {employee.status === 'Pending' && (
-                    <Dialog open={isPayDialogOpen} onOpenChange={setIsPayDialogOpen}>
-                      <DialogTrigger asChild>
-                        <Button 
-                          size="sm" 
-                          onClick={() => setSelectedEmployee(employee)}
-                        >
-                          Pay Now
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Confirm Salary Payment</DialogTitle>
-                        </DialogHeader>
-                        {selectedEmployee && (
-                          <div className="space-y-4">
-                            <div className="text-center">
-                              <h3 className="text-lg font-medium">{selectedEmployee.name}</h3>
-                              <p className="text-muted-foreground">{selectedEmployee.role}</p>
+
+                  {/* Status and Actions */}
+                  <div className="flex items-center space-x-2">
+                    <Badge variant={salaryInfo.status === "PAID" ? "default" : "destructive"}>
+                      {salaryInfo.status}
+                    </Badge>
+
+                    <Button variant="outline" size="sm" onClick={() => openHistoryDialog(trainer)}>
+                      <History className="h-4 w-4 mr-2" />
+                      History
+                    </Button>
+
+                    {salaryInfo.status === "PENDING" && (
+                      <Dialog open={isPayDialogOpen && selectedTrainer?.id === trainer.id} onOpenChange={setIsPayDialogOpen}>
+                        <DialogTrigger asChild>
+                          <Button size="sm" onClick={() => setSelectedTrainer(trainer)}>
+                            Pay Now
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Confirm Salary Payment</DialogTitle>
+                          </DialogHeader>
+                          {selectedTrainer && (
+                            <div className="space-y-4">
+                              <p>You are about to pay <strong>${calculateSalary(selectedTrainer).toLocaleString()}</strong> to <strong>{selectedTrainer.name}</strong>.</p>
+                              <Button onClick={handlePaySalary} className="w-full">
+                                Confirm Payment
+                              </Button>
                             </div>
-                            
-                            <div className="bg-muted p-4 rounded-lg space-y-2">
-                              <div className="flex justify-between">
-                                <span>Base Salary:</span>
-                                <span>${selectedEmployee.baseSalary}</span>
-                              </div>
-                              <div className="flex justify-between text-green-600">
-                                <span>Bonus:</span>
-                                <span>+${selectedEmployee.bonus}</span>
-                              </div>
-                              <div className="flex justify-between text-red-600">
-                                <span>Deductions:</span>
-                                <span>-${selectedEmployee.deductions}</span>
-                              </div>
-                              <hr />
-                              <div className="flex justify-between font-bold text-lg">
-                                <span>Net Salary:</span>
-                                <span>${selectedEmployee.netSalary}</span>
-                              </div>
-                            </div>
-                            
-                            <Button onClick={handlePaySalary} className="w-full">
-                              Confirm Payment
-                            </Button>
-                          </div>
-                        )}
-                      </DialogContent>
-                    </Dialog>
-                  )}
+                          )}
+                        </DialogContent>
+                      </Dialog>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </CardContent>
       </Card>
+
+      {/* NEW: Salary History Dialog */}
+      <Dialog open={isHistoryDialogOpen} onOpenChange={setIsHistoryDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Salary History for {selectedTrainer?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="max-h-96 overflow-y-auto space-y-2 pr-2">
+            {trainerPaymentHistory.length > 0 ? (
+              trainerPaymentHistory.map(record => (
+                <div key={record.id} className="p-3 bg-muted rounded-md text-sm">
+                  <div className="flex justify-between font-medium">
+                    <span>${record.amount.toLocaleString()}</span>
+                    <span>{record.paymentDate}</span>
+                  </div>
+                  <p className="text-muted-foreground text-xs">{record.notes}</p>
+                </div>
+              ))
+            ) : (
+              <p className="text-center text-muted-foreground py-4">No payment history found.</p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

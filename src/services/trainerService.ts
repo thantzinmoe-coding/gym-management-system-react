@@ -8,12 +8,12 @@ interface AverageRatingResponse {
     averageRating: number;
 }
 export interface TrainerResponseDto {
-  id: number;
-  name: string;
-  email: string;
-  phone: string;
-  status: string;
-  // Add any other relevant fields from your backend's trainer DTO
+    id: number;
+    name: string;
+    email: string;
+    phone: string;
+    status: string;
+    // Add any other relevant fields from your backend's trainer DTO
 }
 
 
@@ -42,7 +42,7 @@ export const trainerService = {
         try {
             // Assuming your backend endpoint for updating trainer status is something like this:
             const response = await api.patch(
-                `${trainerUrl}/accept-trainer/${trainerId}`,
+                `${trainerUrl}/change-trainer-status/${trainerId}`,
                 status, // just send the string directly
                 { headers: { "Content-Type": "text/plain" } }
             );
@@ -72,15 +72,15 @@ export const trainerService = {
         }
     },
 
-   getTotalMemberCount: async (trainerId: number): Promise<number> => {
-  try {
-    const response = await api.get<{ count: number }>(`/api/v1/book-package/trainer/${trainerId}/user-count`);
-    return response.data.count;
-  } catch (error: any) {
-    console.error(`Error fetching total members for trainer ${trainerId}:`, error);
-    throw new Error(error.response?.data?.message || 'Failed to fetch total member count');
-  }
-}
+    getTotalMemberCount: async (trainerId: number): Promise<number> => {
+        try {
+            const response = await api.get<{ count: number }>(`/api/v1/book-package/trainer/${trainerId}/user-count`);
+            return response.data.count;
+        } catch (error: any) {
+            console.error(`Error fetching total members for trainer ${trainerId}:`, error);
+            throw new Error(error.response?.data?.message || 'Failed to fetch total member count');
+        }
+    }
 
 };
 

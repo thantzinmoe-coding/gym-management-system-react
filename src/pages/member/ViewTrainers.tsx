@@ -8,15 +8,7 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import { Search, Star, Calendar, Mail, Phone } from 'lucide-react';
+import { Search, Star, Mail, Phone } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 // Import TrainerResponseDto and the new method
 import { trainerService, TrainerResponseDto } from '@/services/trainerService';
@@ -32,7 +24,7 @@ interface DisplayTrainer extends TrainerResponseDto {
 
 // Interface for the average rating response from the backend (as defined in trainerService.ts)
 interface AverageRatingResponse {
-    averageRating: number;
+  averageRating: number;
 }
 
 
@@ -138,10 +130,10 @@ export default function ViewTrainers() {
       {count !== undefined && count > 0 && (
         <span className="text-sm text-muted-foreground ml-1">({count})</span>
       )}
-       {/* If count is 0, undefined, or not relevant, show the average rating value */}
-       { (count === undefined || count === 0) && (
-           <span className="text-sm text-muted-foreground ml-1">{rating.toFixed(1)}</span>
-       )}
+      {/* If count is 0, undefined, or not relevant, show the average rating value */}
+      {(count === undefined || count === 0) && (
+        <span className="text-sm text-muted-foreground ml-1">{rating.toFixed(1)}</span>
+      )}
     </div>
   );
 
@@ -232,3 +224,4 @@ export default function ViewTrainers() {
     </div>
   );
 }
+

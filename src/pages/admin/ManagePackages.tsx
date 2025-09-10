@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,30 +8,43 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Edit, Trash2, Users, Package } from 'lucide-react';
+import { Plus, Edit, Trash2, Users } from 'lucide-react';
 import { useTrainers } from '@/context/TrainerContext';
 import { usePackages } from '@/context/PackageContext';
+import { gymPackageService } from '@/services/gymPackageService';
+import { assignedGymPackageService } from '@/services/assignedGymPackageService';
+import { scheduleService } from '@/services/scheduleService';
+import type { Package, Schedule } from "@/context/PackageContext";
 
 export default function ManagePackages() {
   const { trainers } = useTrainers();
-  const { packages, setPackages } = usePackages();
+  const { packages, setPackages, getAllGymPackages } = usePackages();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingPackage, setEditingPackage] = useState<any>(null);
   const [step, setStep] = useState<number>(1);
+  const { getAvailableTrainers } = useTrainers();
 
   const [newPackage, setNewPackage] = useState({
     name: '',
     price: '',
     duration: '',
     description: '',
-    type: 'personal',
+    gymPackageType: 'PERSONAL',
     trainerId: '',
+    trainerName: '',
     startDate: '',
     endDate: ''
   });
 
-  const [schedule, setSchedule] = useState<{ day: string; startTime: string; endTime: string }[]>([]);
+  useEffect(() => {
+    // Fetch available trainers when component mounts
+    getAllGymPackages();
+    getAvailableTrainers();
+  }, []);
+
+  const [schedules, setSchedule] = useState<Schedule[]>([]);
+
 
   const resetForm = () => {
     setNewPackage({
@@ -39,8 +52,9 @@ export default function ManagePackages() {
       price: '',
       duration: '',
       description: '',
-      type: 'personal',
+      gymPackageType: 'PERSONAL',
       trainerId: '',
+      trainerName: '',
       startDate: '',
       endDate: ''
     });
@@ -58,7 +72,7 @@ export default function ManagePackages() {
     if (!startDate || !duration) return '';
     const start = new Date(startDate);
     let monthsToAdd = 0;
-    switch(duration) {
+    switch (duration) {
       case '1 Month': monthsToAdd = 1; break;
       case '3 Months': monthsToAdd = 3; break;
       case '6 Months': monthsToAdd = 6; break;
@@ -69,67 +83,202 @@ export default function ManagePackages() {
     return end.toISOString().split('T')[0];
   };
 
-  const handleAddPackage = () => {
-    if (!newPackage.name || !newPackage.price || !newPackage.duration || !newPackage.trainerId || !newPackage.startDate) {
+  const handleAddPackage = async () => {
+    if (!newPackage.name || !newPackage.price || !newPackage.duration || !newPackage.trainerId || !newPackage.startDate || !newPackage.gymPackageType) {
       alert('Please complete all required fields.');
       return;
     }
-    const newId = packages.length > 0 ? Math.max(...packages.map(p => p.id)) + 1 : 1;
-    const trainer = trainers.find((t: any) => String(t.id) === String(newPackage.trainerId));
-    const packageData = {
-      id: newId,
-      ...newPackage,
-      price: parseFloat(newPackage.price),
-      status: 'Active',
-      subscribers: 0,
-      trainerName: trainer?.name || '',
-      schedule
-    };
-    setPackages([...packages, packageData]);
-    resetForm();
-    setIsDialogOpen(false);
+
+    try {
+      const packageData = {
+        ...newPackage,
+        gymPackageType: newPackage.gymPackageType.toUpperCase(),
+        price: parseFloat(newPackage.price),
+      };
+
+      // ✅ Call backend API
+      const createdPackage = await gymPackageService.createGymPackage(packageData);
+
+      setPackages([...packages, createdPackage?.data?.Package]);
+
+      console.log("Created package:", createdPackage);
+
+      const assignTrainer = async () => {
+        try {
+          // ✅ CORRECT THE ACCESS HERE!
+          if (createdPackage?.data?.Package?.id) {
+            const data = await assignedGymPackageService.assignSchedule({
+              trainerId: parseInt(newPackage.trainerId),
+              gymPackageId: createdPackage?.data?.Package?.id
+            });
+
+            setPackages([...packages, data]);  // Also correct here
+
+            console.log("Assigned successfully:", data);
+          } else {
+            console.warn("Package ID is undefined. Skipping trainer assignment.");
+          }
+
+        } catch (error) {
+          console.error("Assignment failed:", error);
+        }
+      };
+
+      assignTrainer();
+
+      if (createdPackage?.data?.Package?.id) {
+        const scheduleData = schedules.map(s => ({
+          day: s.day,
+          startTime: s.startTime,
+          endTime: s.endTime,
+        }));
+
+        const bulkScheduleRequest = {
+          gymPackageId: createdPackage?.data?.Package?.id,  // And here
+          schedules: scheduleData,
+        };
+
+        const data = await scheduleService.createBulkSchedules(bulkScheduleRequest);
+
+        setPackages([...packages, data]);
+        console.log("Bulk schedules created successfully!");
+      }
+
+      resetForm();
+      setIsDialogOpen(false);
+
+    } catch (error: any) {
+      console.error("Failed to create package:", error);
+      alert(error.message || "Failed to create package.");
+    }
+    getAllGymPackages();
+    getAvailableTrainers();
   };
 
-  const handleUpdatePackage = () => {
+
+  const handleUpdatePackage = async () => {
     if (!editingPackage) return;
     if (!newPackage.name || !newPackage.price || !newPackage.duration || !newPackage.trainerId || !newPackage.startDate) {
       alert('Please complete all required fields.');
       return;
     }
-    const trainer = trainers.find((t: any) => String(t.id) === String(newPackage.trainerId));
-    const updatedPackage = {
-      ...editingPackage,
-      ...newPackage,
-      price: parseFloat(newPackage.price),
-      trainerName: trainer?.name || '',
-      schedule
-    };
-    setPackages(packages.map((p: any) => p.id === editingPackage.id ? updatedPackage : p));
-    resetForm();
-    setIsDialogOpen(false);
+
+    try {
+      // 1️⃣ Update package first
+      const updatedData = {
+        ...newPackage,
+        price: parseFloat(newPackage.price),
+        gymPackageType: newPackage.gymPackageType.toUpperCase()
+      };
+
+      const response = await gymPackageService.updateGymPackage(editingPackage.id, updatedData);
+      const updatedPackage = response?.data?.updatedGymPackage;
+
+      if (updatedPackage?.id) {
+        await assignedGymPackageService.updateAssignedSchedule(Number(newPackage.trainerId), updatedPackage.id);
+      }
+
+      // 2️⃣ Sync schedules
+      if (updatedPackage?.id) {
+        // Compare old vs new schedules
+        const existingSchedules = editingPackage.schedules || [];
+
+        // Update or create schedules
+        for (const schedule of schedules) {
+          if (schedule.id) {
+            // update existing schedule
+            await scheduleService.updateSchedule(schedule.id, {
+              day: schedule.day,
+              startTime: schedule.startTime,
+              endTime: schedule.endTime
+            });
+          } else {
+            // create new schedule
+            await scheduleService.createBulkSchedules({
+              gymPackageId: updatedPackage.id,
+              schedules: [schedule]
+            });
+          }
+        }
+
+
+        // Delete removed schedules
+        const removed = existingSchedules.filter(
+          (old: any) => !schedules.some((s) => s.id === old.id)
+        );
+        for (const r of removed) {
+          await scheduleService.deleteSchedule(r.id);
+        }
+      }
+
+      // 3️⃣ Update frontend state
+      if (updatedPackage) {
+        setPackages(packages.map((p: any) => p.id === editingPackage.id ? { ...updatedPackage, schedules } : p));
+      }
+
+      alert(response?.message || "Package updated successfully.");
+      resetForm();
+      setIsDialogOpen(false);
+
+    } catch (error: any) {
+      console.error("Failed to update package:", error);
+      alert(error.message || "Failed to update package.");
+    }
+
+    getAllGymPackages();
+    getAvailableTrainers();
   };
+
+
 
   const handleEditPackage = (pkg: any) => {
     setEditingPackage(pkg);
+
     setNewPackage({
       name: pkg.name,
       price: pkg.price?.toString() ?? '',
       duration: pkg.duration ?? '',
       description: pkg.description ?? '',
-      type: pkg.type ?? 'personal',
-      trainerId: pkg.trainerId ? String(pkg.trainerId) : '',
+      gymPackageType: pkg.gymPackageType ?? 'personal',
+      trainerId: pkg.trainerId ? String(pkg.trainerId) : '', // ✅ use trainerId from backend
+      trainerName: pkg.trainerName ?? '', // ✅ keep trainer name
       startDate: pkg.startDate ?? '',
       endDate: pkg.endDate ?? ''
     });
-    setSchedule(pkg.schedule ?? []);
+
+    setSchedule(pkg.schedules ?? []);
     setStep(1);
     setIsDialogOpen(true);
   };
 
-  const handleRemovePackage = (id: number) => {
-    if (!confirm('Remove this package?')) return;
-    setPackages(packages.filter((pkg: any) => pkg.id !== id));
+
+
+  const handleRemovePackage = async (id: number, status: string) => {
+    if (status === 'ACTIVE') {
+      alert("In progress packages cannot be deleted.");
+      return;
+    }
+
+    if (status !== 'INACTIVE') {
+      alert("Only upcoming (inactive) packages can be deleted manually.");
+      return;
+    }
+
+    if (!confirm("Remove this package?")) return;
+
+    try {
+      await gymPackageService.deleteGymPackage(id);
+      setPackages(packages.filter((pkg: any) => pkg.id !== id));
+      alert("Package deleted successfully.");
+    } catch (error: any) {
+      console.error("Failed to delete package:", error);
+      alert(error.message || "Failed to delete package.");
+    }
+
+    getAllGymPackages();
+    getAvailableTrainers();
   };
+
 
   const goToStep2 = () => {
     if (!newPackage.name || !newPackage.price || !newPackage.duration || !newPackage.startDate) {
@@ -148,7 +297,7 @@ export default function ManagePackages() {
   };
 
   const toggleDay = (day: string) => {
-    if (schedule.some(s => s.day === day)) {
+    if (schedules.some(s => s.day === day)) {
       setSchedule(prev => prev.filter(s => s.day !== day));
     } else {
       setSchedule(prev => [...prev, { day, startTime: '', endTime: '' }]);
@@ -159,8 +308,8 @@ export default function ManagePackages() {
     setSchedule(prev => prev.map(s => s.day === day ? { ...s, [field]: value } : s));
   };
 
-  const personalPackages = packages.filter((p: any) => p.type === 'personal');
-  const groupPackages = packages.filter((p: any) => p.type === 'group');
+  const personalPackages = packages.filter((p: any) => p.gymPackageType === 'PERSONAL');
+  const groupPackages = packages.filter((p: any) => p.gymPackageType === 'GROUP');
 
   return (
     <div className="space-y-6 p-6 bg-background text-foreground min-h-screen">
@@ -196,13 +345,13 @@ export default function ManagePackages() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
               <div>
                 <Label className="text-muted-foreground">Package Type</Label>
-                <Select value={newPackage.type} onValueChange={(value) => setNewPackage({ ...newPackage, type: value })}>
+                <Select value={newPackage.gymPackageType} onValueChange={(value) => setNewPackage({ ...newPackage, gymPackageType: value })}>
                   <SelectTrigger className="bg-input text-foreground border-input">
                     <SelectValue placeholder="Select type" />
                   </SelectTrigger>
                   <SelectContent className="bg-input text-foreground border-input">
-                    <SelectItem value="personal">Personal Training</SelectItem>
-                    <SelectItem value="group">Group Sessions</SelectItem>
+                    <SelectItem value="PERSONAL">Personal Training</SelectItem>
+                    <SelectItem value="GROUP">Group Sessions</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -216,11 +365,18 @@ export default function ManagePackages() {
               </div>
               <div>
                 <Label className="text-muted-foreground">Start Date</Label>
-                <Input type="date" value={newPackage.startDate} onChange={e => {
-                  const start = e.target.value;
-                  const end = calculateEndDate(start, newPackage.duration);
-                  setNewPackage({ ...newPackage, startDate: start, endDate: end });
-                }} className="bg-input text-foreground border-input" />
+                <Input
+                  type="date"
+                  min={new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]} // 👈 5 days ahead
+                  value={newPackage.startDate}
+                  onChange={e => {
+                    const start = e.target.value;
+                    const end = calculateEndDate(start, newPackage.duration);
+                    setNewPackage({ ...newPackage, startDate: start, endDate: end });
+                  }}
+                  className="bg-input text-foreground border-input"
+                />
+
               </div>
               <div>
                 <Label className="text-muted-foreground">End Date</Label>
@@ -257,19 +413,28 @@ export default function ManagePackages() {
             <div className="mt-2">
               <Label className="text-muted-foreground">Select Trainer</Label>
               <Select
-                value={newPackage.trainerId}
+                value={newPackage.trainerId} // 👈 ensures default trainer is selected
                 onValueChange={(value) => {
-                  setNewPackage({ ...newPackage, trainerId: value });
+                  const selectedTrainer = trainers.find((t: any) => String(t.id) === value);
+                  setNewPackage({ ...newPackage, trainerId: value, trainerName: selectedTrainer?.name || '' });
                   setTimeout(() => setStep(3), 150);
                 }}
               >
-                <SelectTrigger className="bg-input text-foreground border-input"><SelectValue placeholder="Select trainer" /></SelectTrigger>
+                <SelectTrigger className="bg-input text-foreground border-input">
+                  <SelectValue placeholder="Select trainer">
+                    {newPackage.trainerName || "Select trainer"} {/* 👈 show assigned trainer name */}
+                  </SelectValue>
+                </SelectTrigger>
                 <SelectContent className="bg-input text-foreground border-input">
-                  {trainers.map((t: any) => (
-                    <SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>
+                  {(trainers ?? []).map((t: any) => (
+                    <SelectItem key={t.id} value={String(t.id)}>
+                      {t.name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+
+
               <div className="flex justify-between mt-4">
                 <Button onClick={() => setStep(1)} variant="secondary">Back</Button>
                 <div className="flex space-x-2">
@@ -288,8 +453,8 @@ export default function ManagePackages() {
                 <div>
                   <Label className="text-muted-foreground">Days</Label>
                   <div className="flex flex-wrap gap-2 mt-1">
-                    {['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'].map(day => {
-                      const isSelected = schedule.some(s => s.day === day);
+                    {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => {
+                      const isSelected = schedules.some(s => s.day === day);
                       return (
                         <button
                           key={day}
@@ -304,7 +469,7 @@ export default function ManagePackages() {
                 </div>
 
                 <div className="md:col-span-2">
-                  {schedule.map(s => (
+                  {(schedules ?? []).map(s => (
                     <div key={s.day} className="flex items-center gap-4 mb-2">
                       <span className="w-24 text-sm">{s.day}</span>
                       <Input
@@ -353,7 +518,7 @@ export default function ManagePackages() {
         <Card className="bg-card text-card-foreground shadow-lg border border-border">
           <CardHeader className="flex justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Group Sessions</CardTitle>
-            <Package className="h-5 w-5 text-muted-foreground" />
+            {/* <Package className="h-5 w-5 text-muted-foreground" /> */}
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{groupPackages.length}</div>
@@ -395,7 +560,9 @@ function StepDot({ label, active }: any) {
 function PackageList({ packages, onEdit, onRemove }: any) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-      {packages.map((pkg: any) => (
+      {(packages ?? []).map((pkg: any) => (
+        // ✅ ADD THIS CHECK HERE
+        pkg.gymPackageType &&
         <div key={pkg.id} className="p-6 bg-card text-card-foreground rounded-xl shadow-lg border border-border hover:scale-105 transform transition-all duration-200">
           <div className="flex justify-between items-start mb-4">
             <div>
@@ -405,21 +572,39 @@ function PackageList({ packages, onEdit, onRemove }: any) {
             </div>
             <div className="flex space-x-2">
               <Button variant="outline" size="sm" onClick={() => onEdit(pkg)}><Edit className="h-4 w-4" /></Button>
-              <Button variant="destructive" size="sm" onClick={() => onRemove(pkg.id)}><Trash2 className="h-4 w-4" /></Button>
+              <Button variant="destructive" size="sm" onClick={() => onRemove(pkg.id, pkg.status)}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
             </div>
           </div>
           <p className="text-sm text-muted-foreground mb-2">{pkg.description}</p>
-          <Badge className={`px-2 py-1 text-xs ${pkg.status === 'Active' ? 'bg-green-500 text-white' : 'bg-destructive text-destructive-foreground'}`}>{pkg.status}</Badge>
+          <Badge className={`px-2 py-1 text-xs ${pkg.status === 'ACTIVE' ? 'bg-blue-500 text-white' : 'bg-green-500 text-white'}`}>{pkg.status === 'ACTIVE' ? 'In progress' : 'Upcoming'}</Badge>
           {pkg.startDate && pkg.endDate && (
-            <p className="text-xs text-muted-foreground mt-1">Duration: {pkg.startDate} → {pkg.endDate}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Duration: {new Date(pkg.startDate).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+              })}
+              → {new Date(pkg.endDate).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+              })}
+            </p>
           )}
-          {pkg.schedule && pkg.schedule.length > 0 && (
+
+          {pkg.schedules && pkg.schedules.length > 0 && (
             <div className="text-xs text-muted-foreground mt-1">
-              {pkg.schedule.map((s: any) => (
-                <p key={s.day}>{s.day}: {s.startTime} - {s.endTime}</p>
+              {pkg.schedules.map((s: any) => (
+                <p key={s.day}>
+                  {s.day}: {new Date(`1970-01-01T${s.startTime}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                  - {new Date(`1970-01-01T${s.endTime}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                </p>
               ))}
             </div>
           )}
+
         </div>
       ))}
     </div>
