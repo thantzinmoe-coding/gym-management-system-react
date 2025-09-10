@@ -3,35 +3,52 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, Clock, Users, Search, Plus, Edit, Trash2 } from 'lucide-react';
+import { Search, Plus, Edit, Trash2 } from 'lucide-react';
 import { attendanceService, AttendanceRecord, User, AttendanceCreateData } from '@/services/attendanceService';
 import { toast } from "sonner";
 import { format, parseISO, differenceInHours, parse } from 'date-fns';
+import { AttendanceType } from '@/services/attendanceService';
+
+type AttendanceStatus = 'present' | 'absent';
 
 export default function ManageAttendance() {
     const [searchTerm, setSearchTerm] = useState('');
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
     const [editingRecord, setEditingRecord] = useState<AttendanceRecord | null>(null);
-    const [newRecord, setNewRecord] = useState({
+    const [newRecord, setNewRecord] = useState<{
+        userId: number;
+        date: string;
+        timeIn: string;
+        attendanceType: AttendanceType;
+        hoursWorked: number | null;
+        timeOut: string;
+        status: AttendanceStatus;
+    }>({
         userId: 0,
         date: '',
         timeIn: '',
-        attendanceType: 'MEMBER',
+        attendanceType: AttendanceType.TRAINER,
         hoursWorked: null,
-        packageDays: 0,
-        timeOut: ''
+        timeOut: '',
+        status: 'present'
     });
 
     const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
-    const [users, setUsers] = useState<User[]>([]);  // State for users
+    const [users, setUsers] = useState<User[]>([]);
+
+    // Only trainer attendance
+    const trainerAttendance = attendanceRecords.filter(record => record.attendanceType === AttendanceType.TRAINER);
+
+    const filteredTrainerData = trainerAttendance.filter(item =>
+        item.userName.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
     useEffect(() => {
         fetchAttendanceData();
-        fetchUsers(); // Fetch users on component mount
+        fetchUsers();
     }, []);
 
     const fetchAttendanceData = async () => {
@@ -46,7 +63,7 @@ export default function ManageAttendance() {
     const fetchUsers = async () => {
         try {
             const usersData = await attendanceService.getAllUsers();
-            console.log("Users Data:", usersData); // Debug log
+            console.log("Users Data:", usersData);
             setUsers(usersData);
         } catch (error: any) {
             console.error("Error fetching users:", error);
@@ -54,42 +71,51 @@ export default function ManageAttendance() {
         }
     };
 
-    const memberAttendance = attendanceRecords.filter(record => record.attendanceType === 'MEMBER');
-    const trainerAttendance = attendanceRecords.filter(record => record.attendanceType === 'TRAINER');
-
-    const filteredMemberData = memberAttendance.filter(item =>
-        item.userName.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
-    const filteredTrainerData = trainerAttendance.filter(item =>
-        item.userName.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
     const handleAddRecord = async () => {
-        if (newRecord.userId && newRecord.date && newRecord.timeIn && newRecord.attendanceType) {
+        // For absent trainers, we only need userId, date, and attendanceType
+        const isValidAbsent = newRecord.status === 'absent' && 
+            newRecord.userId && newRecord.date && newRecord.attendanceType === AttendanceType.TRAINER;
+
+        // For present trainers, we need timeIn as well
+        const isValidPresent = newRecord.status === 'present' && 
+            newRecord.attendanceType === AttendanceType.TRAINER &&
+            newRecord.userId && newRecord.date && newRecord.timeIn;
+
+        if (isValidAbsent || isValidPresent) {
             try {
-                const record: AttendanceCreateData = {
+                const recordToSend: AttendanceCreateData = {
                     userId: newRecord.userId,
                     date: newRecord.date,
-                    timeIn: newRecord.timeIn,
-                    attendanceType: newRecord.attendanceType === 'MEMBER' ? 'MEMBER' : 'TRAINER',
-                    hoursWorked: newRecord.hoursWorked,
-                    packageDays: newRecord.packageDays
+                    attendanceType: newRecord.attendanceType,
+                    // For absent records, use a default time or null
+                    timeIn: newRecord.status === 'absent' ? '00:00' : newRecord.timeIn,
+                    ...(newRecord.hoursWorked !== null && newRecord.hoursWorked !== undefined && {
+                        hoursWorked: newRecord.hoursWorked
+                    })
                 };
 
-                const newRecordResponse = await attendanceService.addAttendance(record);
-                setAttendanceRecords([...attendanceRecords, newRecordResponse]);
+                const newRecordResponse = await attendanceService.addAttendance(recordToSend);
+                
+                // If it's an absent record, we might need to update it to reflect absent status
+                const recordToAdd = {
+                    ...newRecordResponse,
+                    status: newRecord.status
+                };
 
+                setAttendanceRecords([...attendanceRecords, recordToAdd]);
+
+                // Reset state
                 setNewRecord({
                     userId: 0,
                     date: '',
                     timeIn: '',
-                    attendanceType: 'MEMBER',
+                    attendanceType: AttendanceType.TRAINER,
                     hoursWorked: null,
-                    packageDays: 0,
-                    timeOut: ''
+                    timeOut: '',
+                    status: 'present'
                 });
                 setIsAddDialogOpen(false);
+                toast.success(`Trainer ${newRecord.status} record added successfully`);
             } catch (error: any) {
                 toast.error(error.message || "Failed to add attendance record");
             }
@@ -98,33 +124,34 @@ export default function ManageAttendance() {
         }
     };
 
-     const handleEdit = (record: AttendanceRecord) => {
-        setEditingRecord(record);
-
-        // Parse the timeIn value
-        const timeInString = record.timeIn;
-
-        // Use the date to correctly calculate the date.
-        const date = record.date;
-
-        // The error was here, because timeIn was not parsed correctly. timeIn is in HH:mm format, so we use that to parse the date.
-        const timeIn = parse(timeInString, 'HH:mm', parseISO(date));
-
-        console.log("Parsed timeIn:", timeIn); // Debug log
-
-        // set timeOut value
-        const timeOutString = record.timeOut;// Debug log
-
-        console.log("timeOutString:", timeOutString); // Debug log
-
-        // set the hours worked
-        let hoursWorked = 0;
-        if (timeOutString != null) {
-            const timeOut = parse(timeOutString, 'HH:mm', parseISO(date));
-           hoursWorked = differenceInHours(timeOut, timeIn);
+    const handleEdit = (record: AttendanceRecord) => {
+        if (record.attendanceType !== 'TRAINER') {
+            toast.error("Only trainer attendance records can be edited");
+            return;
         }
 
-        console.log("Calculated hoursWorked:", hoursWorked); // Debug log
+        // Don't allow editing absent records
+        if (record.status === 'absent') {
+            toast.error("Absent records cannot be edited");
+            return;
+        }
+
+        if (record.timeOut != null) {
+            toast.error("This record is already closed");
+            return;
+        }
+
+        setEditingRecord(record);
+
+        const timeInString = record.timeIn;
+        const date = record.date;
+        const timeIn = parse(timeInString, 'HH:mm', parseISO(date));
+
+        let hoursWorked = 0;
+        if (record.timeOut != null) {
+            const timeOut = parse(record.timeOut, 'HH:mm', parseISO(date));
+            hoursWorked = differenceInHours(timeOut, timeIn);
+        }
 
         setNewRecord({
             userId: record.userId,
@@ -132,81 +159,66 @@ export default function ManageAttendance() {
             timeIn: record.timeIn,
             attendanceType: record.attendanceType,
             hoursWorked: hoursWorked,
-            packageDays: 0,
-            timeOut: record.timeOut
+            timeOut: record.timeOut || '',
+            status: record.status || 'present'
         });
         setIsAddDialogOpen(true);
     };
 
-     const handleUpdateRecord = async () => {
-    if (editingRecord) {
-        try {
+    const handleUpdateRecord = async () => {
+        if (editingRecord) {
+            try {
+                if (editingRecord.timeOut == null) {
+                    const checkInTime = editingRecord.timeIn;
+                    const date = editingRecord.date;
+                    const checkOutTime = newRecord.timeOut;
 
-          if (editingRecord.timeOut == null) {
-            // Get the check-in time from the existing record
-            const checkInTime = editingRecord.timeIn;
+                    console.log("Check Out Time:", checkOutTime);
 
-             // Use the date to correctly calculate the date.
-            const date = editingRecord.date;
+                    const parsedTimeIn = parse(checkInTime, 'HH:mm', parseISO(date));
+                    const parsedTimeOut = parse(checkOutTime, 'HH:mm', parseISO(date));
 
-            // Get the current time as the check-out time
-            const checkOutTime = newRecord.timeOut;
+                    const hoursWorkedCalc = differenceInHours(parsedTimeOut, parsedTimeIn);
 
-            console.log("Check Out Time:", checkOutTime); // Debug log
+                    console.log("Calculated hoursWorkedCalc:", hoursWorkedCalc);
 
-             // The error was here, because timeIn was not parsed correctly. timeIn is in HH:mm format, so we use that to parse the date.
-             const parsedTimeIn = parse(checkInTime, 'HH:mm', parseISO(date));
-             // The error was here, because timeOut was not parsed correctly. timeOut is in HH:mm format, so we use that to parse the date.
-             const parsedTimeOut = parse(checkOutTime, 'HH:mm', parseISO(date));
+                    const updateData = {
+                        timeOut: checkOutTime,
+                        hoursWorked: hoursWorkedCalc,
+                    };
 
-            // Calculate hours worked (difference in hours between checkOutTime and checkInTime)
-            const hoursWorkedCalc = differenceInHours(
-                parsedTimeOut,
-                parsedTimeIn
-            );
+                    const updatedRecordResponse = await attendanceService.updateAttendance(editingRecord.id, updateData);
 
-            console.log("Calculated hoursWorkedCalc:", hoursWorkedCalc); // Add this line
+                    setAttendanceRecords(
+                        attendanceRecords.map(record =>
+                            record.id === editingRecord.id
+                                ? { ...record, timeOut: checkOutTime, hoursWorked: hoursWorkedCalc }
+                                : record
+                        )
+                    );
 
-            // Prepare update data (only timeOut is editable)
-            const updateData = {
-                timeOut: checkOutTime,
-                hoursWorked: hoursWorkedCalc,
-            };
-
-            const updatedRecordResponse = await attendanceService.updateAttendance(editingRecord.id, updateData);
-
-            setAttendanceRecords(
-                attendanceRecords.map(record =>
-                    record.id === editingRecord.id
-                        ? { ...record, timeOut: checkOutTime, hoursWorked: hoursWorkedCalc }
-                        : record
-            )
-        );
-
-            setEditingRecord(null);
-            setNewRecord({
-                userId: 0,
-                date: '',
-                timeIn: '',
-                attendanceType: 'MEMBER',
-                hoursWorked: null,
-                packageDays: 0,
-                timeOut: ''
-            });
-            setIsAddDialogOpen(false);
-            toast.success("Attendance Time Out updated successfully");
-          } else {
-               toast.error("Attendance Time Out already recorded")
-          }
-
-
-        } catch (error: any) {
-            toast.error(error.message || "Failed to update attendance record");
+                    setEditingRecord(null);
+                    setNewRecord({
+                        userId: 0,
+                        date: '',
+                        timeIn: '',
+                        attendanceType: AttendanceType.TRAINER,
+                        hoursWorked: null,
+                        timeOut: '',
+                        status: 'present'
+                    });
+                    setIsAddDialogOpen(false);
+                    toast.success("Attendance Time Out updated successfully");
+                } else {
+                    toast.error("Attendance Time Out already recorded")
+                }
+            } catch (error: any) {
+                toast.error(error.message || "Failed to update attendance record");
+            }
         }
-    }
-};
+    };
 
-    const handleDelete = async (id: number, type: string) => {
+    const handleDelete = async (id: number) => {
         try {
             await attendanceService.deleteAttendance(id);
             setAttendanceRecords(attendanceRecords.filter(record => record.id !== id));
@@ -216,12 +228,21 @@ export default function ManageAttendance() {
         }
     };
 
+    const getStatusBadge = (record: AttendanceRecord) => {
+        if (record.status === 'absent') {
+            return <Badge variant="destructive">Absent</Badge>;
+        }
+        return <Badge variant={record.timeOut == null ? 'secondary' : 'default'}>
+            {record.timeOut == null ? 'Present' : 'Closed'}
+        </Badge>;
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold text-foreground">Manage Attendance</h1>
-                    <p className="text-muted-foreground">Track and manage member and trainer attendance</p>
+                    <h1 className="text-3xl font-bold text-foreground">Manage Trainer Attendance</h1>
+                    <p className="text-muted-foreground">Track and manage trainer attendance</p>
                 </div>
                 <div className="flex gap-2">
                     <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
@@ -233,17 +254,21 @@ export default function ManageAttendance() {
                         </DialogTrigger>
                         <DialogContent>
                             <DialogHeader>
-                                <DialogTitle>{editingRecord ? 'Edit' : 'Add'} Attendance Record</DialogTitle>
+                                <DialogTitle>{editingRecord ? 'Edit' : 'Add'} Trainer Attendance Record</DialogTitle>
                             </DialogHeader>
                             <div className="space-y-4">
                                 <div>
-                                    <Label htmlFor="userId">User</Label>
-                                    <Select onValueChange={(value) => setNewRecord({ ...newRecord, userId: parseInt(value) })}>
-                                        <SelectTrigger className="w-[240px]">
-                                            <SelectValue placeholder="Select a user" />
+                                    <Label htmlFor="userId">Trainer</Label>
+                                    <Select
+                                        value={newRecord.userId.toString()}
+                                        onValueChange={(value) => setNewRecord({ ...newRecord, userId: parseInt(value) })}
+                                        disabled={!!editingRecord}
+                                    >
+                                        <SelectTrigger className="w-full">
+                                            <SelectValue placeholder="Select a trainer" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {users.map((user) => (
+                                            {users.filter(user => user.role === 'TRAINER').map((user) => (
                                                 <SelectItem key={user.userId} value={user.userId.toString()}>
                                                     {user.userName} ({user.userEmail})
                                                 </SelectItem>
@@ -251,6 +276,7 @@ export default function ManageAttendance() {
                                         </SelectContent>
                                     </Select>
                                 </div>
+                                
                                 <div>
                                     <Label htmlFor="date">Date</Label>
                                     <Input
@@ -258,9 +284,29 @@ export default function ManageAttendance() {
                                         type="date"
                                         value={newRecord.date}
                                         onChange={(e) => setNewRecord({ ...newRecord, date: e.target.value })}
+                                        disabled={!!editingRecord}
                                     />
                                 </div>
-                                {editingRecord == null ? (
+
+                                {!editingRecord && (
+                                    <div>
+                                        <Label htmlFor="status">Attendance Status</Label>
+                                        <Select
+                                            value={newRecord.status}
+                                            onValueChange={(value: AttendanceStatus) => setNewRecord({ ...newRecord, status: value })}
+                                        >
+                                            <SelectTrigger className="w-full">
+                                                <SelectValue placeholder="Select attendance status" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="present">Present</SelectItem>
+                                                <SelectItem value="absent">Absent</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                )}
+
+                                {!editingRecord && newRecord.status === 'present' && (
                                     <div>
                                         <Label htmlFor="timeIn">Check In Time</Label>
                                         <Input
@@ -270,52 +316,30 @@ export default function ManageAttendance() {
                                             onChange={(e) => setNewRecord({ ...newRecord, timeIn: e.target.value })}
                                         />
                                     </div>
-                                ) : null}
-                                {editingRecord != null ? (
-                                    <div>
-                                        <Label htmlFor="timeOut">Check Out Time</Label>
-                                        <Input
-                                            id="timeOut"
-                                            type="time"
-                                            onChange={(e) => setNewRecord({ ...newRecord, timeOut: e.target.value })}
-                                        />
-                                    </div>
-                                ) : null}
-                                {editingRecord != null ? (
-                                    <div>
-                                        <Label htmlFor="hoursWorked">Hours Worked</Label>
-                                        <Input
-                                            id="hoursWorked"
-                                            type="number"
-                                            value={newRecord.hoursWorked}
-                                            disabled
-                                        />
-                                    </div>
-                                ) : null}
-                                <div>
-                                    <Label htmlFor="attendanceType">Attendance Type</Label>
-                                    <Select value={newRecord.attendanceType} onValueChange={(value) => setNewRecord({ ...newRecord, attendanceType: value as 'MEMBER' | 'TRAINER' })}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select type" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="MEMBER">Member</SelectItem>
-                                            <SelectItem value="TRAINER">Trainer</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                {newRecord.attendanceType === 'MEMBER' && (
-                                    <div>
-                                        <Label htmlFor="packageDays">Package Days</Label>
-                                        <Input
-                                            id="packageDays"
-                                            type="number"
-                                            value={newRecord.packageDays}
-                                            onChange={(e) => setNewRecord({ ...newRecord, packageDays: parseInt(e.target.value) })}
-                                            placeholder="Enter Package Days"
-                                        />
-                                    </div>
                                 )}
+
+                                {editingRecord && (
+                                    <>
+                                        <div>
+                                            <Label htmlFor="timeOut">Check Out Time</Label>
+                                            <Input
+                                                id="timeOut"
+                                                type="time"
+                                                onChange={(e) => setNewRecord({ ...newRecord, timeOut: e.target.value })}
+                                            />
+                                        </div>
+                                        <div>
+                                            <Label htmlFor="hoursWorked">Hours Worked</Label>
+                                            <Input
+                                                id="hoursWorked"
+                                                type="number"
+                                                value={newRecord.hoursWorked || ''}
+                                                disabled
+                                            />
+                                        </div>
+                                    </>
+                                )}
+
                                 <Button onClick={editingRecord ? handleUpdateRecord : handleAddRecord} className="w-full">
                                     {editingRecord ? 'Update' : 'Add'} Record
                                 </Button>
@@ -326,191 +350,70 @@ export default function ManageAttendance() {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Members Present</CardTitle>
-                        <Users className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-primary">
-                            {memberAttendance.filter(m => m.timeOut == null).length}
-                        </div>
-                        <p className="text-xs text-muted-foreground">Today</p>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Trainers Present</CardTitle>
-                        <Users className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-primary">
-                            {trainerAttendance.filter(t => t.timeOut == null).length}
-                        </div>
-                        <p className="text-xs text-muted-foreground">Today</p>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Total Absent</CardTitle>
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-destructive">
-                            {attendanceRecords.filter(r => r.timeOut == null).length}
-                        </div>
-                        <p className="text-xs text-muted-foreground">Today</p>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Attendance Rate</CardTitle>
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-primary">
-                            {attendanceRecords.length > 0 ? Math.round((attendanceRecords.filter(r => r.timeOut != null).length / attendanceRecords.length) * 100) : 0}%
-                        </div>
-                        <p className="text-xs text-muted-foreground">Today</p>
-                    </CardContent>
-                </Card>
-            </div>
-
-            <Tabs defaultValue="members" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="members">Member Attendance</TabsTrigger>
-                    <TabsTrigger value="trainers">Trainer Attendance</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="members">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Member Attendance</CardTitle>
-                            <CardDescription>Daily member check-in and check-out records</CardDescription>
-                            <div className="flex items-center space-x-2">
-                                <Search className="h-4 w-4 text-muted-foreground" />
-                                <Input
-                                    placeholder="Search members..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="max-w-sm"
-                                />
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-4">
-                                {filteredMemberData.map((record) => (
-                                    <div key={record.id} className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-                                        <div className="flex items-center space-x-4">
-                                            <div className="h-10 w-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium">
-                                                {record.userName.split(' ').map(n => n[0]).join('')}
-                                            </div>
-                                            <div>
-                                                <p className="font-medium text-foreground">{record.userName}</p>
-                                                <p className="text-sm text-muted-foreground">{format(parseISO(record.date), 'MM/dd/yyyy')}</p>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center space-x-4">
-                                            <div className="text-center">
-                                                <p className="text-sm font-medium">Check In</p>
-                                                <p className="text-sm text-muted-foreground">{record.timeIn}</p>
-                                            </div>
-                                            <div className="text-center">
-                                                <p className="text-sm font-medium">Check Out</p>
-                                                <p className="text-sm text-muted-foreground">
-                                                    {record.timeOut ? format(parseISO(record.timeOut), 'hh:mm a') : '-'}
-                                                </p>
-                                            </div>
-                                            <div className="text-center">
-                                                <p className="text-sm font-medium">Hours Worked</p>
-                                                <p className="text-sm text-muted-foreground">
-                                                    {record.hoursWorked != null && typeof record.hoursWorked === 'number' ? record.hoursWorked.toFixed(2) : '-'}
-                                                </p>
-                                            </div>
-                                            <Badge variant={record.timeOut == null ? 'destructive' : 'default'}>
-                                                {record.timeOut == null ? 'Present' : 'Closed'}
-                                            </Badge>
-                                            <Button variant="outline" size="sm" onClick={() => handleEdit(record)}  disabled={record.timeOut != null}>
-                                                <Edit className="h-4 w-4" />
-                                            </Button>
-                                            <Button variant="outline" size="sm" onClick={() => handleDelete(record.id, 'member')}>
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                        </div>
+            <Card>
+                <CardHeader>
+                    <CardTitle>Trainer Attendance</CardTitle>
+                    <CardDescription>Daily trainer check-in, check-out and absent records</CardDescription>
+                    <div className="flex items-center space-x-2">
+                        <Search className="h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Search trainers..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="max-w-sm"
+                        />
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    <div className="space-y-4">
+                        {filteredTrainerData.map((record) => (
+                            <div key={record.id} className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                                <div className="flex items-center space-x-4">
+                                    <div className="h-10 w-10 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center text-sm font-medium">
+                                        {record.userName.split(' ').map(n => n[0]).join('')}
                                     </div>
-                                ))}
-                            </div>
-                        </CardContent>
-                    </Card>
-                </TabsContent>
-
-                <TabsContent value="trainers">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Trainer Attendance</CardTitle>
-                            <CardDescription>Daily trainer check-in and check-out records</CardDescription>
-                            <div className="flex items-center space-x-2">
-                                <Search className="h-4 w-4 text-muted-foreground" />
-                                <Input
-                                    placeholder="Search trainers..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="max-w-sm"
-                                />
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-4">
-                                {filteredTrainerData.map((record) => (
-                                    <div key={record.id} className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-                                        <div className="flex items-center space-x-4">
-                                            <div className="h-10 w-10 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center text-sm font-medium">
-                                                {record.userName.split(' ').map(n => n[0]).join('')}
-                                            </div>
-                                            <div>
-                                                <p className="font-medium text-foreground">{record.userName}</p>
-                                                <p className="text-sm text-muted-foreground">{format(parseISO(record.date), 'MM/dd/yyyy')}</p>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center space-x-4">
-                                            <div className="text-center">
-                                                <p className="text-sm font-medium">Check In</p>
-                                                <p className="text-sm text-muted-foreground">
-                                                    {record.timeIn}</p>
-                                            </div>
-                                            <div className="text-center">
-                                                <p className="text-sm font-medium">Check Out</p>
-                                                <p className="text-sm text-muted-foreground">
-                                                    {record.timeOut}
-                                                </p>
-                                            </div>
-                                            <div className="text-center">
-                                                <p className="text-sm font-medium">Hours Worked</p>
-                                                <p className="text-sm text-muted-foreground">
-                                                    {record.hoursWorked != null && typeof record.hoursWorked === 'number' ? record.hoursWorked.toFixed(2) : '-'}
-                                                </p>
-                                            </div>
-                                            <Badge variant={record.timeOut == null ? 'destructive' : 'default'}>
-                                                {record.timeOut == null ? 'Present' : 'Closed'}
-                                            </Badge>
-                                            <Button variant="outline" size="sm" onClick={() => handleEdit(record)} disabled={record.timeOut != null}>
-                                                <Edit className="h-4 w-4" />
-                                            </Button>
-                                            <Button variant="outline" size="sm" onClick={() => handleDelete(record.id, 'trainer')}>
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                        </div>
+                                    <div>
+                                        <p className="font-medium text-foreground">{record.userName}</p>
+                                        <p className="text-sm text-muted-foreground">{format(parseISO(record.date), 'MM/dd/yyyy')}</p>
                                     </div>
-                                ))}
+                                </div>
+                                <div className="flex items-center space-x-4">
+                                    <div className="text-center">
+                                        <p className="text-sm font-medium">Check In</p>
+                                        <p className="text-sm text-muted-foreground">
+                                            {record.status === 'absent' ? '-' : record.timeIn}
+                                        </p>
+                                    </div>
+                                    <div className="text-center">
+                                        <p className="text-sm font-medium">Check Out</p>
+                                        <p className="text-sm text-muted-foreground">
+                                            {record.status === 'absent' ? '-' : (record.timeOut || '-')}
+                                        </p>
+                                    </div>
+                                    <div className="text-center">
+                                        <p className="text-sm font-medium">Hours Worked</p>
+                                        <p className="text-sm text-muted-foreground">
+                                            {record.status === 'absent' ? '-' : (record.hoursWorked != null && typeof record.hoursWorked === 'number' ? record.hoursWorked.toFixed(2) : '-')}
+                                        </p>
+                                    </div>
+                                    {getStatusBadge(record)}
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        onClick={() => handleEdit(record)} 
+                                        disabled={record.timeOut != null || record.status === 'absent'}
+                                    >
+                                        <Edit className="h-4 w-4" />
+                                    </Button>
+                                    <Button variant="outline" size="sm" onClick={() => handleDelete(record.id)}>
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                </div>
                             </div>
-                        </CardContent>
-                    </Card>
-                </TabsContent>
-            </Tabs>
+                        ))}
+                    </div>
+                </CardContent>
+            </Card>
         </div>
     );
 }

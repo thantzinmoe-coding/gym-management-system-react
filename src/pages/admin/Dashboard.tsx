@@ -5,6 +5,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Users, UserCheck, Dumbbell, Package } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
+// Import services
+import { manageUserService } from "@/services/manageUserService";
+import { trainerService } from "@/services/trainerService";
+import { equipmentService } from "@/services/equipmentService";
+// 🔹 (If you have packageService, import it here)
+
 export default function AdminDashboard() {
   // ✅ Dynamic state
   const [stats, setStats] = useState({
@@ -14,19 +20,37 @@ export default function AdminDashboard() {
     packages: 0,
   });
 
-  // ✅ Simulated fetch (replace with your API later)
+  const [loading, setLoading] = useState(true);
+
+  // ✅ Fetch from backend
   useEffect(() => {
     const fetchStats = async () => {
-      // Example: fetch from backend
-      // const res = await fetch("/api/admin/stats");
-      // const data = await res.json();
-      const data = {
-        members: 245,
-        trainers: 12,
-        equipment: 68,
-        packages: 8,
-      };
-      setStats(data);
+      try {
+        // Members
+      const usersResponse = await manageUserService.getAllUsers(0, 10, undefined, "MEMBER", "active"); 
+const membersCount = usersResponse.meta?.totalElements || usersResponse.meta?.totalItems || 0;
+
+        // Trainers
+        const trainersResponse = await trainerService.getAllActiveTrainers(0, 1); 
+        const trainersCount = trainersResponse.meta?.totalItems || trainersResponse.data?.length || 0;
+
+         const equipmentCount = await equipmentService.getEquipmentCount(); // backend already paginated, but you can add meta if available
+
+        // Packages (replace with your packageService if exists)
+        // For now, mock:
+        const packagesCount = 8; 
+
+        setStats({
+          members: membersCount,
+          trainers: trainersCount,
+          equipment: equipmentCount,
+          packages: packagesCount,
+        });
+      } catch (error) {
+        console.error("Error fetching stats:", error);
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchStats();
@@ -67,7 +91,9 @@ export default function AdminDashboard() {
               <stat.icon className={`h-4 w-4 ${stat.color}`} />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
+              <div className="text-2xl font-bold">
+                {loading ? "..." : stat.value}
+              </div>
             </CardContent>
           </Card>
         ))}
@@ -99,32 +125,7 @@ export default function AdminDashboard() {
         </Card>
 
         {/* Quick Actions */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-            <CardDescription>Common administrative tasks</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-4">
-              <button className="p-4 border border-border rounded-lg hover:bg-accent transition-colors">
-                <Users className="h-6 w-6 mb-2 text-primary" />
-                <p className="text-sm font-medium">Add Member</p>
-              </button>
-              <button className="p-4 border border-border rounded-lg hover:bg-accent transition-colors">
-                <UserCheck className="h-6 w-6 mb-2 text-primary" />
-                <p className="text-sm font-medium">Add Trainer</p>
-              </button>
-              <button className="p-4 border border-border rounded-lg hover:bg-accent transition-colors">
-                <Dumbbell className="h-6 w-6 mb-2 text-primary" />
-                <p className="text-sm font-medium">Add Equipment</p>
-              </button>
-              <button className="p-4 border border-border rounded-lg hover:bg-accent transition-colors">
-                <Package className="h-6 w-6 mb-2 text-primary" />
-                <p className="text-sm font-medium">Create Package</p>
-              </button>
-            </div>
-          </CardContent>
-        </Card>
+        
       </div>
     </div>
   );

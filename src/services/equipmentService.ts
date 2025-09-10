@@ -82,5 +82,16 @@ export const equipmentService = {
             console.error(`Error deleting equipment with ID ${id}:`, error);
             throw new Error(error.response?.data?.message || 'Failed to delete equipment'); // Throw Error
         }
-    }
+    },
+    // equipmentService.ts
+  getEquipmentCount: async (): Promise<number> => {
+  try {
+    const response = await api.get<PaginatedEquipmentResponse>(`${equipmentUrl}?page=0&size=1`);
+    return response.data.meta.totalItems; // ✅ use meta.totalItems
+  } catch (error: any) {
+    console.error('Error fetching equipment count:', error);
+    throw new Error(error.response?.data?.message || 'Failed to fetch equipment count');
+  }
+},
+
 };

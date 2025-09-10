@@ -48,7 +48,7 @@ const Reviews = () => {
           title: f.title || 'Member Review',
           review: f.comment,
           verified: true,
-          trainerName : f.trainerName // backend doesn’t send, so assume true
+          trainerName: f.trainerName // backend doesn’t send, so assume true
         }));
 
         setReviews(mappedReviews);
@@ -57,11 +57,11 @@ const Reviews = () => {
         const avgResponse = await feedbackService.getAverageRatingForTrainer(1);
         const avgData = avgResponse.data; // check actual structure
 
-      const reviewStats: ReviewStats = {
-  totalReviews: avgData.totalReviews || 0,
-  averageRating: avgData.averageRating || 0,
-  ratingBreakdown: avgData.ratingBreakdown || { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
-};
+        const reviewStats: ReviewStats = {
+          totalReviews: avgData.totalReviews || 0,
+          averageRating: avgData.averageRating || 0,
+          ratingBreakdown: avgData.ratingBreakdown || { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
+        };
 
 
         setStats(reviewStats);
@@ -159,32 +159,32 @@ const Reviews = () => {
             <div className="grid lg:grid-cols-2 gap-8 mb-12">
               {reviews.map((review) => (
                 <Card key={review.id} className="p-6">
-  <div className="flex items-start justify-between mb-4">
-    <div>
-      <h3 className="font-semibold text-lg">{review.name}</h3>
-      {review.verified && (
-        <span className="text-xs bg-primary text-primary-foreground px-2 py-1 rounded">
-          Verified Member
-        </span>
-      )}
-      {/* ✅ Show trainer name */}
-      {review.trainerName && (
-        <p className="text-sm text-muted-foreground mt-1">
-          Trainer: {review.trainerName}
-        </p>
-      )}
-    </div>
-    <div className="text-right">
-      <div className="flex">{renderStars(review.rating)}</div>
-      <p className="text-sm text-muted-foreground">
-        {formatDate(review.date)}
-      </p>
-    </div>
-  </div>
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <h3 className="font-semibold text-lg">{review.name}</h3>
+                      {review.verified && (
+                        <span className="text-xs bg-primary text-primary-foreground px-2 py-1 rounded">
+                          Verified Member
+                        </span>
+                      )}
+                      {/* ✅ Show trainer name */}
+                      {review.trainerName && (
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Trainer: {review.trainerName}
+                        </p>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <div className="flex">{renderStars(review.rating)}</div>
+                      <p className="text-sm text-muted-foreground">
+                        {formatDate(review.date)}
+                      </p>
+                    </div>
+                  </div>
 
-  <h4 className="font-semibold mb-2">{review.title}</h4>
-  <p className="text-muted-foreground leading-relaxed">{review.review}</p>
-</Card>
+                  <h4 className="font-semibold mb-2">{review.title}</h4>
+                  <p className="text-muted-foreground leading-relaxed">{review.review}</p>
+                </Card>
 
               ))}
             </div>

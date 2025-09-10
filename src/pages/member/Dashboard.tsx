@@ -10,7 +10,7 @@ export default function MemberDashboard() {
   // Top stats for membership
   const stats = [
     { title: "Membership Status", value: "Active", icon: Package, color: "text-green-400" },
-    { title: "Attendance This Month", value: "14 Days", icon: UserCheck, color: "text-blue-400" },
+  
     { title: "Assigned Trainer", value: "Alex Johnson", icon: Users, color: "text-purple-400" },
     { title: "Current Package", value: "Premium", icon: Dumbbell, color: "text-orange-400" },
   ];
@@ -141,13 +141,7 @@ export default function MemberDashboard() {
               <Package className="h-6 w-6 mb-2 text-primary" />
               <p className="text-sm font-medium">Book Packages</p>
             </button>
-            <button
-              onClick={() => navigate("/member/attendance")}
-              className="p-4 border border-border rounded-lg hover:bg-accent transition-colors"
-            >
-              <UserCheck className="h-6 w-6 mb-2 text-primary" />
-              <p className="text-sm font-medium">View Attendance</p>
-            </button>
+            
             <button
               onClick={() => navigate("/member/trainers")}
               className="p-4 border border-border rounded-lg hover:bg-accent transition-colors"

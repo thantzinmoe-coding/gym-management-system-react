@@ -1,29 +1,50 @@
 // src/services/attendanceService.ts
 import api from '@/services/api';
 import { format, parseISO, differenceInHours, parse } from 'date-fns';
-// Define your data types (align with backend DTOs)
-export interface AttendanceRecord {
-    id: number;
-    userId: number; // Changed back to userId
-    userName: string;
-    userRole: string;
-    date: string; // ISO string
-    timeIn: string;
-    timeOut: string | null;
-    attendanceType: 'MEMBER' | 'TRAINER'; // Or use your enum
-    hoursWorked: number | null;
-    packageDays: number | null;
-    hoursWorkedFrontend?: number | null;
+
+
+export enum AttendanceType {
+    MEMBER = 'MEMBER',
+    TRAINER = 'TRAINER'
 }
 
 export interface AttendanceCreateData {
-    userId: number; // Changed back to userId
-    date: string; // ISO string
-    timeIn: string;
-    attendanceType: 'MEMBER' | 'TRAINER';
+    userId: number;
+    date: string;
+    attendanceType: AttendanceType; // Use enum
+    
+    timeIn?: string;
     hoursWorked?: number;
-    packageDays?: number;
+    status?: 'present' | 'absent';
 }
+
+export interface AttendanceRecord {
+    id: number;
+    userId: number;
+    userName: string;
+    userRole: string;
+    date: string;
+    timeIn: string;
+    timeOut: string | null;
+    attendanceType: AttendanceType; // Use enum
+    hoursWorked: number | null;
+    packageDays: number | null;
+    hoursWorkedFrontend?: number | null;
+    status : 'present' | 'absent' ;
+}
+// Define your data types (align with backend DTOs)
+export interface TrainerAttendanceRecord { // Make sure this is exported if used directly
+    id: number | string;
+    date: string;
+    timeIn: string;
+    timeOut: string | null;
+    clientName: string;
+    packageName: string;
+    sessionType: string;
+    status: 'present' | 'absent' | 'late';
+    notes?: string;
+}
+
 
 interface AttendanceUpdateData {
     timeOut: string;
@@ -70,7 +91,34 @@ const extractData = (response: any) => {
     }
     return null;
 };
-
+const extractTrainerAttendance = (response: any): TrainerAttendanceRecord[] => {
+    if (response && response.data && Array.isArray(response.data.attendances)) {
+        return response.data.attendances.map((attendance: any) => {
+            return {
+                id: attendance.id,
+                date: attendance.date,
+                timeIn: attendance.timeIn,
+                timeOut: attendance.timeOut,
+                clientName: attendance.clientName || 'N/A',
+                packageName: attendance.packageName || 'N/A',
+                sessionType: attendance.sessionType || 'N/A',
+                status: attendance.status || (attendance.timeOut ? 'present' : 'absent'),
+                notes: attendance.notes || null
+            };
+        });
+    }
+    return [];
+};
+const getTrainerAttendanceRecords = async (trainerId: number): Promise<TrainerAttendanceRecord[]> => {
+    try {
+        // IMPORTANT: Ensure this API path matches your backend.
+        const response = await api.get(`${basePath}/attendance/trainer/${trainerId}`); // Adjust URL as per your backend
+        return extractTrainerAttendance(response.data);
+    } catch (error: any) {
+        console.error(`Error fetching attendance for trainer ID ${trainerId}:`, error);
+        throw new Error(error.response?.data?.message || 'Failed to fetch trainer attendance');
+    }
+};
 // Helper function to extract list of attendances from ApiResponse
 // Helper function to extract list of attendances from ApiResponse
 const extractAttendances = (response: any) => {
@@ -206,5 +254,15 @@ export const attendanceService = {
             console.error(`Error deleting attendance with ID ${id}:`, error);
             throw new Error(error.response?.data?.message || 'Failed to delete attendance');
         }
-    }
+    },
+    getTrainerAttendanceRecords: async (trainerId: number): Promise<TrainerAttendanceRecord[]> => {
+        try {
+            // Ensure this API path matches your backend
+            const response = await api.get(`${basePath}/attendance/trainer/${trainerId}`); // Adjust URL as per your backend
+            return extractTrainerAttendance(response.data);
+        } catch (error: any) {
+            console.error(`Error fetching attendance for trainer ID ${trainerId}:`, error);
+            throw new Error(error.response?.data?.message || 'Failed to fetch trainer attendance');
+        }
+    },
 };
