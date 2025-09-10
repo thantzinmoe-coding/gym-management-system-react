@@ -29,7 +29,7 @@ export const trainerService = {
         try {
             // Assuming your backend endpoint for updating trainer status is something like this:
             const response = await api.patch(
-                `${trainerUrl}/accept-trainer/${trainerId}`,
+                `${trainerUrl}/change-trainer-status/${trainerId}`,
                 status, // just send the string directly
                 { headers: { "Content-Type": "text/plain" } }
             );
@@ -41,7 +41,19 @@ export const trainerService = {
         }
     },
 
-    getTrainerApplications: async (role: string = "trainer", status: string = "inactive", page: number = 0, size: number = 20) => {
+    acceptTrainerApplication: async (trainerId: number) => {
+        try {
+            const response = await api.patch(
+                `${trainerUrl}/accept-trainer-application/${trainerId}`
+            );
+            return response.data;
+        } catch (error) {
+            console.error(`Error accepting trainer application ${trainerId}:`, error);
+            throw error.response?.data || { message: 'Failed to accept trainer application' };
+        }
+    },
+
+    getTrainerApplications: async (role: string = "trainer", status: string = "pending", page: number = 0, size: number = 20) => {
         try {
             const response = await api.get(
                 `${trainerUrl}/all-users?role=${role}&status=${status}&page=${page}&size=${size}`
@@ -49,7 +61,7 @@ export const trainerService = {
             return response.data;
         } catch (error) {
             console.error('Error fetching trainer applications: ', error);
-            throw error.response?.data || { message: 'Failed to fetch trainer applications'};
+            throw error.response?.data || { message: 'Failed to fetch trainer applications' };
         }
     },
 

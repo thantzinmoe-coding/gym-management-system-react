@@ -16,13 +16,23 @@ export const assignedGymPackageService = {
   },
 
   // ✅ Unassign a trainer from a package (by assigned ID)
-  unassignSchedule: async (id: number) => {
+  unassignSchedule: async (id: number, packageId: number) => {
     try {
-      const response = await api.delete(`${assignedGymPackageUrl}/${id}`);
+      const response = await api.delete(`${assignedGymPackageUrl}/${id}/${packageId}`);
       return response.data;
     } catch (error: any) {
       console.error(`Error unassigning schedule with id ${id}:`, error);
       throw error.response?.data || { message: 'Failed to unassign schedule' };
     }
-  }
+  },
+
+  updateAssignedSchedule: async (trainerId: number, packageId: number) => {
+    try {
+      const response = await api.patch(`${assignedGymPackageUrl}/${trainerId}/${packageId}`);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Error updating assigned schedule with id ${id}:`, error);
+      throw error.response?.data || { message: 'Failed to update assigned schedule' };
+    }
+  },
 };

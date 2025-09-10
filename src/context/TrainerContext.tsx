@@ -26,6 +26,7 @@ interface TrainerContextType {
   updateTrainer: (id: string, trainer: Partial<Trainer>) => void;
   removeTrainer: (id: string) => void;
   getAvailableTrainers: () => Promise<void>;
+  getAllTrainers: () => Promise<void>;
 }
 
 const TrainerContext = createContext<TrainerContextType | undefined>(undefined);
@@ -45,6 +46,11 @@ export const TrainerProvider = ({ children }: { children: ReactNode }) => {
     setTrainers(data.data);
   }
 
+  const getAllTrainers = async () => {
+    const data = await trainerService.getAllTrainers();
+    setTrainers(data.data);
+  }
+
   const addTrainer = (newTrainer: Omit<Trainer, "id">) => {
     const trainer: Trainer = { ...newTrainer, id: Date.now().toString() };
     setTrainers(prev => [...prev, trainer]);
@@ -59,7 +65,7 @@ export const TrainerProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <TrainerContext.Provider value={{ trainers, addTrainer, updateTrainer, removeTrainer, getAvailableTrainers }}>
+    <TrainerContext.Provider value={{ trainers, addTrainer, updateTrainer, removeTrainer, getAvailableTrainers, getAllTrainers }}>
       {children}
     </TrainerContext.Provider>
   );

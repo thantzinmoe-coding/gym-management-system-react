@@ -17,10 +17,12 @@ export default function ManageProfile() {
   const user = authService.getCurrentUser();
   const [profilePhotoUrl, setProfilePhotoUrl] = useState<string>();
 
+  // ✅ Profile state with NRC
   const [profile, setProfile] = useState({
     name: '',
     email: '',
     phone: '',
+    nrc: '',
     dateOfBirth: '',
     gender: '',
     address: '',
@@ -30,6 +32,7 @@ export default function ManageProfile() {
     profilePhoto: ''
   });
 
+  // ✅ Fetch profile from backend
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -40,6 +43,7 @@ export default function ManageProfile() {
             name: userProfile.name || '',
             email: user.email || '',
             phone: userProfile.phone || '',
+            nrc: userProfile.nrc || '',
             dateOfBirth: userProfile.dob || '',
             gender: userProfile.gender || '',
             address: userProfile.address || '',
@@ -47,7 +51,7 @@ export default function ManageProfile() {
           }));
 
           if (userProfile.profilePic) {
-            const token = Cookies.get('token'); // make sure you have this
+            const token = Cookies.get('token');
             const response = await fetch(`${userProfile.profilePic}`, {
               headers: {
                 Authorization: `Bearer ${token}`,
@@ -77,22 +81,22 @@ export default function ManageProfile() {
     fetchProfile();
   }, [user.id]);
 
+  // ✅ Handle input changes
   const handleInputChange = (field: string, value: string) => {
     setProfile(prev => ({ ...prev, [field]: value }));
   };
 
+  // ✅ Upload photo
   const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     try {
-      // Upload file to backend
       const result = await userService.uploadProfilePicture(user.id, file);
 
-      // The backend returns the URL of the uploaded image
       if (result.url) {
         setProfile(prev => ({ ...prev, profilePhoto: result.url }));
-        setProfilePhotoUrl(result.url); // directly set preview to server-hosted image
+        setProfilePhotoUrl(result.url);
       }
 
       toast({
@@ -109,11 +113,10 @@ export default function ManageProfile() {
     }
   };
 
-
-  // ✅ Save Profile
+  // ✅ Save Profile with NRC
   const handleSaveProfile = async () => {
     try {
-      const response = await userService.updateProfile(profile, user.id);
+      await userService.updateProfile(profile, user.id);
 
       await userService.updateUserDetails(user.id, {
         height: profile.height,
@@ -167,12 +170,22 @@ export default function ManageProfile() {
             <div className="flex items-center space-x-4 mb-6">
               <Avatar className="h-20 w-20">
                 <AvatarImage src={profilePhotoUrl || "/placeholder-avatar.jpg"} />
-                <AvatarFallback className="text-lg">{profile.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                <AvatarFallback className="text-lg">
+                  {profile.name.split(' ').map(n => n[0]).join('')}
+                </AvatarFallback>
               </Avatar>
               {isEditing && (
                 <div>
-                  <input type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" id="photo-upload" />
-                  <Button variant="outline" onClick={() => document.getElementById('photo-upload')?.click()}>Change Photo</Button>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoUpload}
+                    className="hidden"
+                    id="photo-upload"
+                  />
+                  <Button variant="outline" onClick={() => document.getElementById('photo-upload')?.click()}>
+                    Change Photo
+                  </Button>
                 </div>
               )}
             </div>
@@ -185,6 +198,11 @@ export default function ManageProfile() {
             <div>
               <Label htmlFor="email">Email</Label>
               <Input id="email" type="email" value={profile.email} onChange={(e) => handleInputChange('email', e.target.value)} disabled={!isEditing} />
+            </div>
+
+            <div>
+              <Label htmlFor="nrc">NRC</Label>
+              <Input id="nrc" value={profile.nrc} onChange={(e) => handleInputChange('nrc', e.target.value)} disabled={!isEditing} />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -200,12 +218,12 @@ export default function ManageProfile() {
 
             <div>
               <Label htmlFor="gender">Gender</Label>
-              <Input value={profile.gender} onChange={(e) => handleInputChange('gender', e.target.value)} disabled={!isEditing} />
+              <Input id="gender" value={profile.gender} onChange={(e) => handleInputChange('gender', e.target.value)} disabled={!isEditing} />
             </div>
 
             <div>
               <Label htmlFor="address">Address</Label>
-              <Textarea value={profile.address} onChange={(e) => handleInputChange('address', e.target.value)} disabled={!isEditing} />
+              <Textarea id="address" value={profile.address} onChange={(e) => handleInputChange('address', e.target.value)} disabled={!isEditing} />
             </div>
           </CardContent>
         </Card>

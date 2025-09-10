@@ -7,15 +7,7 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import { Search, Star, Calendar, Mail, Phone } from 'lucide-react';
+import { Search, Star, Mail, Phone } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { trainerService } from '@/services/trainerService'; // Ensure correct path
 import { Mail as MailIcon, Phone as PhoneIcon } from 'lucide-react';
@@ -31,7 +23,6 @@ interface TrainerResponseDto {
 export default function ViewTrainers() {
   const [trainers, setTrainers] = useState<TrainerResponseDto[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedTrainer, setSelectedTrainer] = useState<TrainerResponseDto | null>(null); // Keep the state
   const { toast } = useToast();
 
   useEffect(() => {
@@ -149,29 +140,7 @@ export default function ViewTrainers() {
               </div>
             </CardHeader>
             <CardContent className="pt-2">
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button
-                    size="sm"
-                    disabled={false}
-                    className="flex-1 bg-slate-800 hover:bg-slate-700 text-white"
-                  // onClick={() => setSelectedTrainer(trainer)}  //Removed the book package
-                  >
-                    <Calendar className="h-4 w-4 mr-2" />
-                    Book Session
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Book Session with {trainer.name}</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <p className="text-sm text-muted-foreground">
-                      This feature is coming soon!
-                    </p>
-                  </div>
-                </DialogContent>
-              </Dialog>
+              {/* Removed Book Session button */}
             </CardContent>
           </Card>
         ))}
