@@ -17,15 +17,16 @@ interface EquipmentFormProps {
 export const EquipmentForm = ({ equipment, onCancel }: EquipmentFormProps) => {
   const { addEquipment, updateEquipment } = useEquipments();
   const [formData, setFormData] = useState({
-    name: equipment.name,
-    purchaseDate: equipment.purchaseDate,
-    equipmentCondition: equipment.equipmentCondition,
-    lastMaintenanceDate: equipment.lastMaintenanceDate,
-    nextMaintenanceDate: equipment.nextMaintenanceDate,
+    name: equipment?.name || "",
+    purchaseDate: equipment?.purchaseDate || "",
+    equipmentCondition: equipment?.equipmentCondition || "",
+    lastMaintenanceDate: equipment?.lastMaintenanceDate || "",
+    nextMaintenanceDate: equipment?.nextMaintenanceDate || "",
     imageFile: undefined as File | undefined,
   });
 
-  const [previewUrl, setPreviewUrl] = useState<string | null>(equipment.imageUrl || null);
+
+  const [previewUrl, setPreviewUrl] = useState<string | null>(equipment?.imageUrl || null);
 
   useEffect(() => {
     const loadImage = async () => {
@@ -210,24 +211,18 @@ export const EquipmentForm = ({ equipment, onCancel }: EquipmentFormProps) => {
                   onChange={handleFileChange}
                 />
 
-                {imagePreview && (
+                {previewUrl && (
                   <div className="mb-4">
-                    {previewUrl ? (
-                      <img
-                        src={previewUrl}
-                        alt="Equipment Preview"
-                        className="w-40 h-40 object-cover rounded-md"
-                      />
-                    ) : (
-                      <div className="w-40 h-40 bg-gray-200 flex items-center justify-center">
-                        <span>No Image</span>
-                      </div>
-                    )}
-
+                    <img
+                      src={previewUrl}
+                      alt="Equipment Preview"
+                      className="w-40 h-40 object-cover rounded-md"
+                    />
                   </div>
                 )}
               </div>
             </div>
+
 
             {/* Form Actions */}
             <div className="flex gap-2 pt-4">
