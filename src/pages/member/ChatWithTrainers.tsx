@@ -81,40 +81,40 @@ export default function ChatWithTrainers() {
   });
 
   // Fetch trainer avatars
-// Fetch trainer avatars with Authorization header
-useEffect(() => {
-  async function fetchTrainerAvatars() {
-    if (!trainersData?.data) return;
-    const newAvatars: Record<number, string> = {};
-    const token = Cookies.get('token');
+  // Fetch trainer avatars with Authorization header
+  useEffect(() => {
+    async function fetchTrainerAvatars() {
+      if (!trainersData?.data) return;
+      const newAvatars: Record<number, string> = {};
+      const token = Cookies.get('token');
 
-    await Promise.all(
-      trainersData.data.map(async (trainer) => {
-        if (trainer.avatarUrl && token) {
-          try {
-            const response = await fetch(`${trainer.avatarUrl}`, {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            });
-            if (response.ok) {
-              const blob = await response.blob();
-              newAvatars[trainer.id] = URL.createObjectURL(blob);
-            } else {
-              console.error(`Failed to fetch avatar for trainer ${trainer.id}: ${response.statusText}`);
+      await Promise.all(
+        trainersData.data.map(async (trainer) => {
+          if (trainer.avatarUrl && token) {
+            try {
+              const response = await fetch(`${trainer.avatarUrl}`, {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              });
+              if (response.ok) {
+                const blob = await response.blob();
+                newAvatars[trainer.id] = URL.createObjectURL(blob);
+              } else {
+                console.error(`Failed to fetch avatar for trainer ${trainer.id}: ${response.statusText}`);
+              }
+            } catch (err) {
+              console.error(`Error fetching avatar for trainer ${trainer.id}:`, err);
             }
-          } catch (err) {
-            console.error(`Error fetching avatar for trainer ${trainer.id}:`, err);
           }
-        }
-      })
-    );
+        })
+      );
 
-    setTrainerAvatars(newAvatars);
-  }
+      setTrainerAvatars(newAvatars);
+    }
 
-  fetchTrainerAvatars();
-}, [trainersData]);
+    fetchTrainerAvatars();
+  }, [trainersData]);
 
 
   // Fetch chat rooms
@@ -203,7 +203,7 @@ useEffect(() => {
   });
 
   if (trainersLoading || roomsLoading) {
-    return <div>Loading trainers...</div>;
+    return <div>Loading Users...</div>;
   }
 
   return (
@@ -235,9 +235,8 @@ useEffect(() => {
               {filteredTrainers.map((trainer) => (
                 <div
                   key={trainer.id}
-                  className={`p-3 cursor-pointer border-b border-white hover:bg-blue-100 ${
-                    selectedTrainer?.id === trainer.id ? 'bg-blue-200' : 'bg-white'
-                  }`}
+                  className={`p-3 cursor-pointer border-b border-white hover:bg-blue-100 ${selectedTrainer?.id === trainer.id ? 'bg-blue-200' : 'bg-white'
+                    }`}
                   onClick={() => handleSelectTrainer(trainer)}
                 >
                   <div className="flex items-center justify-between">
@@ -317,9 +316,8 @@ useEffect(() => {
                       className={`flex ${message.senderId === userId ? 'justify-end' : 'justify-start'}`}
                     >
                       <div
-                        className={`max-w-[70%] p-3 rounded-lg ${
-                          message.senderId === userId ? 'bg-blue-500 text-white' : 'bg-blue-100 text-black'
-                        }`}
+                        className={`max-w-[70%] p-3 rounded-lg ${message.senderId === userId ? 'bg-blue-500 text-white' : 'bg-blue-100 text-black'
+                          }`}
                       >
                         <p className="text-sm">{message.content}</p>
                         <div className="flex items-center justify-between mt-1">

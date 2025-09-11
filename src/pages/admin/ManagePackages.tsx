@@ -367,7 +367,7 @@ export default function ManagePackages() {
                 <Label className="text-muted-foreground">Start Date</Label>
                 <Input
                   type="date"
-                  min={new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]} // 👈 5 days ahead
+                  min={new Date(Date.now() + 6 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]} // 👈 5 days ahead
                   value={newPackage.startDate}
                   onChange={e => {
                     const start = e.target.value;
