@@ -342,13 +342,13 @@ const App = () => (
         <TrainerProvider>
           <PackageProvider>
             <TooltipProvider>
-              <EquipmentProvider>
+               <EquipmentProvider> {/* EquipmentProvider Here */}
                 <Toaster />
                 <Sonner />
                 <BrowserRouter>
                   <AppRoutes />
                 </BrowserRouter>
-              </EquipmentProvider>
+              </EquipmentProvider>{/* EquipmentProvider Here */}
             </TooltipProvider>
           </PackageProvider>
         </TrainerProvider>

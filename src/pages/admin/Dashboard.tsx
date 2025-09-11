@@ -5,8 +5,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Users, UserCheck, Dumbbell, Package } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
+// Import services
+import { manageUserService } from "@/services/manageUserService";
+import { trainerService } from "@/services/trainerService";
+import { equipmentService } from "@/services/equipmentService";
+import { gymPackageService } from "@/services/gymPackageService";
+// import { gymPackageService } from "@/services/gymPackageService"; // if you want real count
+
 export default function AdminDashboard() {
-  // ✅ Dynamic state
   const [stats, setStats] = useState({
     members: 0,
     trainers: 0,
@@ -14,19 +20,38 @@ export default function AdminDashboard() {
     packages: 0,
   });
 
-  // ✅ Simulated fetch (replace with your API later)
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
     const fetchStats = async () => {
-      // Example: fetch from backend
-      // const res = await fetch("/api/admin/stats");
-      // const data = await res.json();
-      const data = {
-        members: 245,
-        trainers: 12,
-        equipment: 68,
-        packages: 8,
-      };
-      setStats(data);
+      try {
+        // Members
+        const usersResponse = await manageUserService.getAllUsers(0, 10, undefined, "MEMBER", "active");
+        const membersCount = usersResponse.meta?.totalElements || usersResponse.meta?.totalItems || 0;
+
+        // Trainers
+        const trainersResponse = await trainerService.getAllActiveTrainers(0, 1);
+        const trainersCount = trainersResponse.meta?.totalItems || trainersResponse.data?.length || 0;
+
+        // Equipment
+        const equipmentCount = await equipmentService.getEquipmentCount();
+
+        const totalPackagesResponse = await gymPackageService.getAllGymPackages(0, 1);
+        const packagesCount = totalPackagesResponse.meta?.totalItems || totalPackagesResponse.data?.length || 0;
+
+        // Packages (replace with serv
+
+        setStats({
+          members: membersCount,
+          trainers: trainersCount,
+          equipment: equipmentCount,
+          packages: packagesCount,
+        });
+      } catch (error) {
+        console.error("Error fetching stats:", error);
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchStats();
@@ -39,7 +64,6 @@ export default function AdminDashboard() {
     { title: "Package Plans", value: stats.packages, icon: Package, color: "text-orange-600" },
   ];
 
-  // ✅ Bar chart data
   const chartData = [
     {
       name: "Gym Stats",
@@ -58,7 +82,7 @@ export default function AdminDashboard() {
         <p className="text-muted-foreground">Manage your gym operations from here</p>
       </div>
 
-      {/* ✅ Stats Cards */}
+      {/* ✅ Stats Cards (4 aligned cards) */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {statCards.map((stat, index) => (
           <Card key={index}>
@@ -67,65 +91,34 @@ export default function AdminDashboard() {
               <stat.icon className={`h-4 w-4 ${stat.color}`} />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
+              <div className="text-2xl font-bold">{loading ? "..." : stat.value}</div>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      {/* ✅ Chart + Quick Actions Side by Side */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Bar Chart */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Gym Overview</CardTitle>
-            <CardDescription>Members, Trainers, Equipment, and Packages</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="Members" fill="#3b82f6" />
-                <Bar dataKey="Trainers" fill="#22c55e" />
-                <Bar dataKey="Equipment" fill="#a855f7" />
-                <Bar dataKey="Packages" fill="#f97316" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        {/* Quick Actions */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-            <CardDescription>Common administrative tasks</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-4">
-              <button className="p-4 border border-border rounded-lg hover:bg-accent transition-colors">
-                <Users className="h-6 w-6 mb-2 text-primary" />
-                <p className="text-sm font-medium">Add Member</p>
-              </button>
-              <button className="p-4 border border-border rounded-lg hover:bg-accent transition-colors">
-                <UserCheck className="h-6 w-6 mb-2 text-primary" />
-                <p className="text-sm font-medium">Add Trainer</p>
-              </button>
-              <button className="p-4 border border-border rounded-lg hover:bg-accent transition-colors">
-                <Dumbbell className="h-6 w-6 mb-2 text-primary" />
-                <p className="text-sm font-medium">Add Equipment</p>
-              </button>
-              <button className="p-4 border border-border rounded-lg hover:bg-accent transition-colors">
-                <Package className="h-6 w-6 mb-2 text-primary" />
-                <p className="text-sm font-medium">Create Package</p>
-              </button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* ✅ Chart aligned below stats */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Gym Overview</CardTitle>
+          <CardDescription>Members, Trainers, Equipment, and Packages</CardDescription>
+        </CardHeader>
+        <CardContent className="h-[350px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="Members" fill="#3b82f6" />
+              <Bar dataKey="Trainers" fill="#22c55e" />
+              <Bar dataKey="Equipment" fill="#a855f7" />
+              <Bar dataKey="Packages" fill="#f97316" />
+            </BarChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -1,45 +1,66 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Upload, X } from "lucide-react";
-
-export interface Equipment {
-  id: string;
-  name: string;
-  purchaseDate: string;
-  condition: "Excellent" | "Good" | "Fair" | "Poor";
-  lastMaintenanceDate: string;
-  nextMaintenanceDate: string;
-  imageUrl?: string;
-}
-
-export interface EquipmentFormData {
-  name: string;
-  purchaseDate: string;
-  condition: "Excellent" | "Good" | "Fair" | "Poor";
-  lastMaintenanceDate: string;
-  nextMaintenanceDate: string;
-  imageFile?: File;
-}
+import { useEquipments, Equipment, EquipmentFormData } from "@/context/EquipmentContext";
+import { useNavigate } from 'react-router-dom'; // Import useNavigate
+import Cookies from "js-cookie";
 
 interface EquipmentFormProps {
   equipment?: Equipment;
-  onSubmit: (data: EquipmentFormData) => void;
   onCancel: () => void;
 }
 
-export const EquipmentForm = ({ equipment, onSubmit, onCancel }: EquipmentFormProps) => {
-  const [formData, setFormData] = useState<EquipmentFormData>({
-    name: equipment?.name || "",
-    purchaseDate: equipment?.purchaseDate || "",
-    condition: equipment?.condition || "Good",
-    lastMaintenanceDate: equipment?.lastMaintenanceDate || "",
-    nextMaintenanceDate: equipment?.nextMaintenanceDate || "",
+export const EquipmentForm = ({ equipment, onCancel }: EquipmentFormProps) => {
+  const { addEquipment, updateEquipment } = useEquipments();
+  const [formData, setFormData] = useState({
+    name: equipment.name,
+    purchaseDate: equipment.purchaseDate,
+    equipmentCondition: equipment.equipmentCondition,
+    lastMaintenanceDate: equipment.lastMaintenanceDate,
+    nextMaintenanceDate: equipment.nextMaintenanceDate,
+    imageFile: undefined as File | undefined,
   });
-  
+
+  const [previewUrl, setPreviewUrl] = useState<string | null>(equipment.imageUrl || null);
+
+  useEffect(() => {
+    const loadImage = async () => {
+      if (equipment?.imageUrl) {
+        try {
+          const token = Cookies.get("token");
+          const response = await fetch(equipment.imageUrl, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+          if (response.ok) {
+            const blob = await response.blob();
+            setPreviewUrl(URL.createObjectURL(blob));
+          }
+        } catch (err) {
+          console.error("Failed to load equipment image:", err);
+        }
+      }
+    };
+
+    loadImage();
+  }, [equipment?.imageUrl]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setFormData(prev => ({ ...prev, imageFile: file }));
+      setPreviewUrl(URL.createObjectURL(file)); // show preview immediately
+    }
+  };
+
+
+  const navigate = useNavigate(); // Initialize useNavigate
+
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>(equipment?.imageUrl || "");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -62,11 +83,21 @@ export const EquipmentForm = ({ equipment, onSubmit, onCancel }: EquipmentFormPr
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit({
+
+    const data = {
       ...formData,
-      imageFile: selectedImage || undefined,
-    });
+      // imageFile is already inside formData
+    };
+
+    if (equipment) {
+      updateEquipment(equipment.id, data);
+    } else {
+      addEquipment(data);
+    }
+
+    onCancel();
   };
+
 
   const handleInputChange = (field: keyof EquipmentFormData, value: string) => {
     setFormData(prev => ({
@@ -88,7 +119,7 @@ export const EquipmentForm = ({ equipment, onSubmit, onCancel }: EquipmentFormPr
             </Button>
           </div>
         </CardHeader>
-        
+
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Equipment Name */}
@@ -113,15 +144,14 @@ export const EquipmentForm = ({ equipment, onSubmit, onCancel }: EquipmentFormPr
                 onChange={(e) => handleInputChange("purchaseDate", e.target.value)}
                 required
               />
-              
             </div>
 
             {/* Condition */}
             <div className="space-y-2">
               <Label>Condition</Label>
               <Select
-                value={formData.condition}
-                onValueChange={(value) => handleInputChange("condition", value)}
+                value={formData.equipmentCondition}
+                onValueChange={(value) => handleInputChange("equipmentCondition", value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select condition" />
@@ -176,16 +206,24 @@ export const EquipmentForm = ({ equipment, onSubmit, onCancel }: EquipmentFormPr
                   ref={fileInputRef}
                   type="file"
                   accept="image/*"
-                  onChange={handleImageChange}
                   className="hidden"
+                  onChange={handleFileChange}
                 />
+
                 {imagePreview && (
-                  <div className="aspect-video w-full bg-muted rounded-md overflow-hidden">
-                    <img
-                      src={imagePreview}
-                      alt="Preview"
-                      className="w-full h-full object-cover"
-                    />
+                  <div className="mb-4">
+                    {previewUrl ? (
+                      <img
+                        src={previewUrl}
+                        alt="Equipment Preview"
+                        className="w-40 h-40 object-cover rounded-md"
+                      />
+                    ) : (
+                      <div className="w-40 h-40 bg-gray-200 flex items-center justify-center">
+                        <span>No Image</span>
+                      </div>
+                    )}
+
                   </div>
                 )}
               </div>

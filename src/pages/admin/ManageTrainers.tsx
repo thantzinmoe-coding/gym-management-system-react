@@ -26,6 +26,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { trainerService } from '@/services/trainerService';
 import Cookies from 'js-cookie';
+import { manageUserService } from '@/services/manageUserService';
 
 interface TrainerResponseDto {
   id: number;
@@ -44,30 +45,29 @@ export default function ManageTrainers() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingTrainer, setEditingTrainer] = useState<TrainerResponseDto | null>(null);
 
-  useEffect(() => {
-    const fetchTrainers = async () => {
-      try {
-        const data = await trainerService.getAllTrainers();
-        if (data && data.data) {
-          setTrainers(data.data);
-        } else {
-          console.error("Unexpected data structure:", data);
-          toast({
-            title: "Error fetching trainers",
-            description: "Unexpected data format from the server.",
-            variant: "destructive",
-          });
-        }
-      } catch (error) {
-        console.error("Failed to fetch trainers:", error);
+  const fetchTrainers = async () => {
+    try {
+      const data = await trainerService.getAllTrainers();
+      if (data && data.data) {
+        setTrainers(data.data);
+      } else {
+        console.error("Unexpected data structure:", data);
         toast({
           title: "Error fetching trainers",
-          description: "Failed to connect to the server.",
+          description: "Unexpected data format from the server.",
           variant: "destructive",
         });
       }
-    };
-
+    } catch (error) {
+      console.error("Failed to fetch trainers:", error);
+      toast({
+        title: "Error fetching trainers",
+        description: "Failed to connect to the server.",
+        variant: "destructive",
+      });
+    }
+  };
+  useEffect(() => {
     fetchTrainers();
   }, [toast]);
 
@@ -151,6 +151,24 @@ export default function ManageTrainers() {
     }
   };
 
+  const handleDeleteTrainer = async (userId: number, userName: string) => {
+    try {
+      await manageUserService.deleteUser(userId);
+      toast({
+        title: "Trainer Deleted",
+        description: "Trainer has been deleted successfully.",
+      });
+      // Reload data after deletion to reflect changes
+      fetchTrainers();
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message || 'Failed to delete trainer',
+      });
+    }
+  };
+
   // Status badge component
   const getStatusBadge = (status: string) => {
     const colors: Record<string, string> = {
@@ -224,12 +242,20 @@ export default function ManageTrainers() {
                 </div>
 
                 {/* Actions */}
-                < div className="flex items-center space-x-2" >
+                <div className="flex items-center space-x-2">
                   {getStatusBadge(trainer.status)}
                   <Button variant="outline" size="sm" onClick={() => handleEditTrainer(trainer)}>
                     <Edit className="h-4 w-4" />
                   </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => handleDeleteTrainer(trainer.id)}
+                  >
+                    🗑️
+                  </Button>
                 </div>
+
               </div>
             ))}
             {trainers.length === 0 && <p className="text-center text-gray-500 py-4">No trainers found.</p>}

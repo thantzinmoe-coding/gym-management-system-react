@@ -1,29 +1,62 @@
+
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Users, UserCheck, Package } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Users, UserCheck, Package, Star } from "lucide-react";
+import { trainerService } from "@/services/trainerService";
+import { authService } from "@/services/authService";
+
+interface StatCard {
+  title: string;
+  value: string | number;
+  icon: React.ComponentType<any>;
+  color: string;
+}
 
 export default function TrainerDashboard() {
   const navigate = useNavigate();
+  const trainer = authService.getCurrentUser();
+  const trainerId = trainer?.id; // Replace with actual logged-in trainer ID
 
-  // Stats for trainer
-  const stats = [
-    { title: "Total Members", value: "120", icon: Users, color: "bg-green-500" },
-    { title: "Attendance Today", value: "35", icon: UserCheck, color: "bg-blue-500" },
-    { title: "Assigned Packages", value: "15", icon: Package, color: "bg-purple-500" },
+  const [totalMembers, setTotalMembers] = useState<number>(0);
+  const [averageRating, setAverageRating] = useState<number>(0);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const members = await trainerService.getTotalMemberCount(trainerId);
+        setTotalMembers(members || 0);
+
+        const rating = await trainerService.getTrainerAverageRating(trainerId);
+        setAverageRating(rating.averageRating);
+      } catch (error) {
+        console.error("Error fetching trainer stats:", error);
+      }
+    };
+
+    fetchStats();
+  }, [trainerId]);
+
+  const stats: StatCard[] = [
+    { title: "Total Members", value: totalMembers, icon: Users, color: "bg-green-500" },
+
+    { title: "Average Rating", value: averageRating.toFixed(1), icon: Star, color: "bg-yellow-500" },
+
   ];
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-white">Trainer Dashboard</h1>
-        <p className="text-gray-300">Track your members and packages efficiently</p>
+        <h1 className="text-3xl font-bold">Trainer Dashboard</h1>
+        <p className="text-gray-400 mt-1">Track your members and packages efficiently</p>
       </div>
 
+
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {stats.map((stat, i) => (
-          <Card key={i} className={`hover:shadow-xl transition-shadow bg-blue-900 text-white`}>
+          <Card key={i} className="hover:shadow-xl transition-shadow bg-gray-800 text-white">
             <CardHeader className="flex justify-between pb-2">
               <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
               <div className={`h-6 w-6 rounded-full ${stat.color} flex items-center justify-center`}>
@@ -36,6 +69,8 @@ export default function TrainerDashboard() {
           </Card>
         ))}
       </div>
+
+
 
       {/* Quick Actions */}
       <Card>

@@ -30,7 +30,6 @@ const memberMenuItems = [
   { title: "Dashboard", url: "/member/dashboard", icon: Home },
   { title: "Book/Cancel Packages", url: "/member/packages", icon: Package },
   { title: "Manage Profile", url: "/member/profile", icon: User },
-  { title: "View Attendance", url: "/member/attendance", icon: UserCheck },
   { title: "View Trainers", url: "/member/trainers", icon: Users },
   { title: "View Equipment", url: "/member/equipment", icon: Dumbbell },
   { title: "Message", url: "/member/chat", icon: MessageCircle },

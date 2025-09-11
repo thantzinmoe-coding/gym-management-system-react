@@ -1,8 +1,22 @@
 // src/services/trainerService.ts
 import api from '@/services/api';
 
-const trainerUrl = '/api/v1/super_admin';
+const trainerUrl = 'api/v1/super_admin';
+const feedbackUrl = 'api/v1/feedback';
 // Corrected: Relative to baseURL in api.ts
+interface AverageRatingResponse {
+    averageRating: number;
+}
+export interface TrainerResponseDto {
+    id: number;
+    name: string;
+    email: string;
+    phone: string;
+    status: string;
+    avatarUrl?: string;
+    // Add any other relevant fields from your backend's trainer DTO
+}
+
 
 export const trainerService = {
     getAllTrainers: async (page: number = 0, size: number = 20) => {
@@ -40,6 +54,34 @@ export const trainerService = {
             throw error.response?.data || { message: 'Failed to update trainer status' };
         }
     },
+    getTrainerAverageRating: async (trainerId: number): Promise<AverageRatingResponse> => {
+        try {
+            const response = await api.get(`${feedbackUrl}/trainer/${trainerId}/average-rating`);
+            // The backend returns ApiResponse with data containing averageRating
+            // Assuming response.data is { success: 1, code: 200, message: "...", data: { averageRating: 5.0 } }
+            if (response.data && response.data.data && typeof response.data.data.averageRating === 'number') {
+                return { averageRating: response.data.data.averageRating };
+            } else {
+                // Handle cases where rating might be missing or null
+                console.warn(`No average rating found for trainer ${trainerId} or unexpected response structure.`);
+                return { averageRating: 0.0 }; // Return 0.0 if no rating is available
+            }
+        } catch (error: any) {
+            console.error(`Error fetching average rating for trainer ${trainerId}:`, error);
+            // If an error occurs (e.g., trainer not found, or no feedback yet), default to 0.0
+            return { averageRating: 0.0 };
+        }
+    },
+
+    getTotalMemberCount: async (trainerId: number) => {
+        try {
+            const response = await api.get<{ count: number }>(`/api/v1/book-package/trainer/${trainerId}/user-count`);
+            return response.data;
+        } catch (error: any) {
+            console.error(`Error fetching total members for trainer ${trainerId}:`, error);
+            throw new Error(error.response?.data?.message || 'Failed to fetch total member count');
+        }
+    },
 
     acceptTrainerApplication: async (trainerId: number) => {
         try {
@@ -74,5 +116,7 @@ export const trainerService = {
             throw error.response?.data || { message: 'Failed to fetch available trainers' };
         }
     }
+
 };
+
 

@@ -1,7 +1,7 @@
 // src/services/assignedGymPackageService.ts
 import api from '@/services/api';
 
-const assignedGymPackageUrl = '/api/v1/assign-schedule';
+const assignedGymPackageUrl = '/api/v1/assign-gym-package';
 
 export const assignedGymPackageService = {
   // ✅ Assign a trainer to a gym package
@@ -33,6 +33,18 @@ export const assignedGymPackageService = {
     } catch (error: any) {
       console.error(`Error updating assigned schedule with id ${id}:`, error);
       throw error.response?.data || { message: 'Failed to update assigned schedule' };
+    }
+  },
+
+
+  // ✅ Get all assigned packages (paginated)
+  getAllAssignedPackagesByTrainerId: async (trainerId: number, page: number = 0, size: number = 20) => {
+    try {
+      const response = await api.get(`${assignedGymPackageUrl}/assign-package-by-trainer/${trainerId}?page=${page}&size=${size}`);
+      return response.data;
+    } catch (error: any) {
+      console.error('Error fetching assigned packages:', error);
+      throw error.response?.data || { message: 'Failed to fetch assigned packages' };
     }
   },
 };

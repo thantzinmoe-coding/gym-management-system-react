@@ -7,12 +7,41 @@ import { Clock, MapPin, Phone, Mail, Users, Award, Target, Zap, Facebook, Twitte
 
 // Corrected: Import Navbar using a relative path from src/pages/Index.tsx
 // to src/components/layout/Navbar.tsx
-import {Navbar} from "../components/layout/Navbar"; // Corrected path
+import { Navbar } from "../components/layout/Navbar"; // Corrected path
+import { getHomeSummary } from "@/services/homeSummaryService"; // Adjust path if needed
+
 
 const Index = () => {
   const [newsletter, setNewsletter] = useState("");
   const [subscribed, setSubscribed] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
+
+  const [totalMembers, setTotalMembers] = useState<number>(0);
+  const [totalTrainers, setTotalTrainers] = useState<number>(0);
+  const [totalClasses, setTotalClasses] = useState<number>(0);
+  const [totalReviews, setTotalReviews] = useState<number>(0);
+
+  useEffect(() => {
+    const fetchHomeSummary = async () => {
+      try {
+        const members = await getHomeSummary.getTotalMembers();
+        const trainers = await getHomeSummary.getTotalTrainers();
+        const classes = await getHomeSummary.getTotalClasses();
+        const reviews = await getHomeSummary.getTotalReviews();
+
+        setTotalMembers(members);
+        setTotalTrainers(trainers);
+        setTotalClasses(classes);
+        setTotalReviews(reviews);
+      } catch (err) {
+        console.error("Error fetching home summary:", err);
+      }
+    };
+
+    fetchHomeSummary();
+  }, []);
+
+
 
   useEffect(() => {
     // Sets up an interval to update the current time every second.
@@ -35,8 +64,6 @@ const Index = () => {
     { name: "Home", href: "/Index" },
     { name: "About Us", href: "/AboutUs" },
     { name: "Services", href: "/Services" },
-    { name: 'Packages', href: '/member/book-packages' },
-    { name: "Trainers", href: "/trainers" },
     { name: "Contact", href: "/ContactUs" },
     { name: "Reviews", href: "/Reviews" },
   ];
@@ -88,11 +115,6 @@ const Index = () => {
                     Start Your Trial
                   </Button>
                 </Link>
-                <Link to="/Services">
-                  <Button variant="outline" size="lg" className="text-lg px-8 py-6 border-black text-black hover:bg-white hover:text-black rounded-xl shadow-lg transition-all duration-300">
-                    View Services
-                  </Button>
-                </Link>
               </div>
             </div>
           </div>
@@ -103,19 +125,19 @@ const Index = () => {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
               <div className="transform transition-transform duration-300 ease-in-out hover:scale-105 p-4 rounded-lg bg-white shadow-md">
-                <div className="text-4xl md:text-6xl font-bold mb-2 text-black">3,200+</div>
+                <div className="text-4xl md:text-6xl font-bold mb-2 text-black">{totalMembers.toLocaleString()}</div>
                 <div className="text-muted-foreground text-lg">Active Members</div>
               </div>
               <div className="transform transition-transform duration-300 ease-in-out hover:scale-105 p-4 rounded-lg bg-white shadow-md">
-                <div className="text-4xl md:text-6xl font-bold mb-2 text-black">24+</div>
+                <div className="text-4xl md:text-6xl font-bold mb-2 text-black">{totalTrainers.toLocaleString()}</div>
                 <div className="text-muted-foreground text-lg">Certified Trainers</div>
               </div>
               <div className="transform transition-transform duration-300 ease-in-out hover:scale-105 p-4 rounded-lg bg-white shadow-md">
-                <div className="text-4xl md:text-6xl font-bold mb-2 text-black">85+</div>
+                <div className="text-4xl md:text-6xl font-bold mb-2 text-black">{totalClasses.toLocaleString()}</div>
                 <div className="text-muted-foreground text-lg">Weekly Classes</div>
               </div>
               <div className="transform transition-transform duration-300 ease-in-out hover:scale-105 p-4 rounded-lg bg-white shadow-md">
-                <div className="text-4xl md:text-6xl font-bold mb-2 text-black">1,400+</div>
+                <div className="text-4xl md:text-6xl font-bold mb-2 text-black">{totalReviews.toLocaleString()}</div>
                 <div className="text-muted-foreground text-lg">5 ★ Reviews</div>
               </div>
             </div>
@@ -215,9 +237,6 @@ const Index = () => {
                   Start Your  Trial
                 </Button>
               </Link>
-              <Button variant="outline" size="lg" className="text-lg px-8 py-6 border-black bg-white text-black hover:bg-black hover:text-white rounded-xl shadow-lg transition-all duration-300">
-                Schedule a Tour
-              </Button>
             </div>
           </div>
         </section>
@@ -347,27 +366,6 @@ const Index = () => {
                   <Mail className="w-5 h-5" />
                   <div>info@fitgym.com</div>
                 </div>
-              </div>
-
-              <div>
-                <h4 className="text-lg font-semibold mb-4">Newsletter</h4>
-                <form onSubmit={handleNewsletterSubmit} className="space-y-3">
-                  <Input
-                    type="email"
-                    value={newsletter}
-                    onChange={(e) => setNewsletter(e.target.value)}
-                    placeholder="Your email address"
-                    className="bg-muted border-border"
-                    required
-                  />
-                  <Button
-                    type="submit"
-                    disabled={subscribed}
-                    className="w-full"
-                  >
-                    {subscribed ? "Subscribed!" : "Subscribe"}
-                  </Button>
-                </form>
               </div>
             </div>
           </div>

@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { authService } from '@/services/authService';
+import { checkPasswordStrength } from "@/utils/passwordUtils";
 
 export type Role = 'ADMIN' | 'TRAINER' | 'MEMBER';
 
@@ -24,6 +25,9 @@ export default function Register() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
+  const strength = checkPasswordStrength(password);
+
+
   if (user) {
     return <Navigate to={`/${user.role}/dashboard`} replace />;
   }
@@ -35,29 +39,41 @@ export default function Register() {
 
 
     // Basic validation
-    if (password.length < 6) {
+    const passwordStrengthRules = [
+      /.{6,}/,
+      /[A-Z]/,
+      /[a-z]/,
+      /[0-9]/,
+      /[^A-Za-z0-9]/,
+    ];
+
+    const failedRules = passwordStrengthRules.filter((rule) => !rule.test(password));
+
+    if (failedRules.length > 0) {
       toast({
-        title: "Password too short",
-        description: "Password must be at least 6 characters long.",
+        title: "Weak password",
+        description:
+          "Password must be at least 6 characters long and include uppercase, lowercase, number, and special character.",
         variant: "destructive",
       });
+      setIsLoading(false);
       return;
     }
 
     try {
+      await authService.verifyEmail(email);
+    } catch (error) {
+      toast({
+        title: "OTP sending failed",
+        description: error?.message || "Failed to send OTP. Please try again.",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      console.error('OTP sending error:', error?.message);
+      return;
+    }
 
-      const verifyResponse = await authService.verifyEmail(email);
-      console.log('OTP sent response:', verifyResponse);
-
-      if (!verifyResponse) {
-        toast({
-          title: "OTP sending failed",
-          description: "Failed to send OTP. Please try again.",
-          variant: "destructive",
-        });
-        return;
-      }
-
+    try {
       const response = await authService.register({
         email: email,
         password: password,
@@ -83,17 +99,15 @@ export default function Register() {
           userId: Id
         }
       });
-
     } catch (error) {
-      console.error('Registration error:', error);
-      setError(error.message || 'Registration failed. Please try again.');
       toast({
-        title: "Registration error",
-        description: "Registration failed. Please try again",
+        title: "Registration failed",
+        description: error?.message || "Failed to register. Please try again.",
         variant: "destructive",
       });
-    } finally {
       setIsLoading(false);
+      console.error('Registration error:', error?.message);
+      return;
     }
   };
 
@@ -119,7 +133,7 @@ export default function Register() {
                 disabled={isLoading}
               />
             </div>
-            
+
             {/* Password Input with Eye Toggle */}
             <div className="space-y-2 relative">
               <Label htmlFor="password">Password</Label>
@@ -140,13 +154,18 @@ export default function Register() {
               >
                 {showPassword ? <Eye size={18} /> : <EyeOff size={18} />}
               </button>
+              {password && (
+                <p className={`text-xs mt-1 ${strength.color}`}>
+                  Strength: {strength.label}
+                </p>
+              )}
             </div>
 
             {/* Role Selection */}
             <div className="space-y-2">
               <Label htmlFor="role">Register as</Label>
-              <Select 
-                value={role} 
+              <Select
+                value={role}
                 onValueChange={(value) => setRole(value as Role)}
                 disabled={isLoading}
               >

@@ -6,10 +6,7 @@ export function Navbar() {
   const navItems = [
     { name: 'Home', href: '/Index' },
     { name: 'About Us', href: '/AboutUs' },
-    { name: 'Services', href: '/Services' },
     { name: 'Contact Us', href: '/ContactUS' },
-    { name: 'Packages', href: '/member/book-packages' },
-    { name: 'Trainers', href: '/trainers' },
     { name: 'Reviews', href: '/Reviews' },
   ];
 
@@ -21,7 +18,7 @@ export function Navbar() {
             <Dumbbell className="h-8 w-8 text-primary" />
             <span className="text-xl font-bold text-foreground">FitGym</span>
           </Link>
-          
+
           <div className="hidden md:flex items-center space-x-8">
             {navItems.map((item) => (
               <Link
@@ -33,7 +30,7 @@ export function Navbar() {
               </Link>
             ))}
           </div>
-          
+
           <div className="flex items-center space-x-4">
             <Link to="/login">
               <Button variant="outline">Login</Button>

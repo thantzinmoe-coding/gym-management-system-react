@@ -1,10 +1,12 @@
-import React, { createContext, useContext, useState, ReactNode } from "react";
+// EquipmentContext.tsx
+import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
+import { equipmentService } from "@/services/equipmentService";
 
 export interface Equipment {
   id: string;
   name: string;
   purchaseDate: string;
-  condition: "Excellent" | "Good" | "Fair" | "Poor";
+  equipmentCondition: "Excellent" | "Good" | "Fair" | "Poor";
   lastMaintenanceDate: string;
   nextMaintenanceDate: string;
   imageUrl?: string;
@@ -13,7 +15,7 @@ export interface Equipment {
 export interface EquipmentFormData {
   name: string;
   purchaseDate: string;
-  condition: "Excellent" | "Good" | "Fair" | "Poor";
+  equipmentCondition: "Excellent" | "Good" | "Fair" | "Poor";
   lastMaintenanceDate: string;
   nextMaintenanceDate: string;
   imageFile?: File;
@@ -21,66 +23,73 @@ export interface EquipmentFormData {
 
 interface EquipmentContextType {
   equipments: Equipment[];
-  addEquipment: (data: EquipmentFormData) => void;
-  updateEquipment: (id: string, data: EquipmentFormData) => void;
-  deleteEquipment: (id: string) => void;
+  addEquipment: (data: EquipmentFormData) => Promise<void>;
+  updateEquipment: (id: string, data: EquipmentFormData) => Promise<void>;
+  deleteEquipment: (id: string) => Promise<void>;
 }
 
 const EquipmentContext = createContext<EquipmentContextType | undefined>(undefined);
 
-const initialEquipments: Equipment[] = [
-  {
-    id: "1",
-    name: "Treadmill Pro X1",
-    purchaseDate: "2023-01-15",
-    condition: "Excellent",
-    lastMaintenanceDate: "2024-01-10",
-    nextMaintenanceDate: "2024-04-10",
-    imageUrl:
-      "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=300&fit=crop",
-  },
-  {
-    id: "2",
-    name: "Weight Bench Deluxe",
-    purchaseDate: "2023-03-20",
-    condition: "Good",
-    lastMaintenanceDate: "2024-02-01",
-    nextMaintenanceDate: "2024-05-01",
-    imageUrl:
-      "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400&h=300&fit=crop",
-  },
-];
-
 export const EquipmentProvider = ({ children }: { children: ReactNode }) => {
-  const [equipments, setEquipments] = useState<Equipment[]>(initialEquipments);
+  const [equipments, setEquipments] = useState<Equipment[]>([]);
 
-  const addEquipment = (data: EquipmentFormData) => {
-    const newEquipment: Equipment = {
-      id: Date.now().toString(),
-      ...data,
-      imageUrl: data.imageFile ? URL.createObjectURL(data.imageFile) : undefined,
+  useEffect(() => {
+    const fetchEquipments = async () => {
+      try {
+        const equipmentsData = await equipmentService.getAllEquipments();
+        console.log("Fetched Equipments:", equipmentsData);
+        setEquipments(equipmentsData);
+      } catch (error) {
+        console.error("Error fetching equipments:", error);
+      }
     };
-    setEquipments((prev) => [...prev, newEquipment]);
+
+    fetchEquipments();
+  }, []);
+
+  const addEquipment = async (data: EquipmentFormData) => {
+    try {
+      const newEquipment = await equipmentService.addEquipment({
+        ...data,
+        equipmentPhoto: data.imageFile,
+      });
+      setEquipments((prev) => [...prev, newEquipment]);
+    } catch (error) {
+      console.error("Error adding equipment:", error);
+      throw error;
+    }
   };
 
-  const updateEquipment = (id: string, data: EquipmentFormData) => {
-    setEquipments((prev) =>
-      prev.map((eq) =>
-        eq.id === id
-          ? {
-              ...eq,
-              ...data,
-              imageUrl: data.imageFile
-                ? URL.createObjectURL(data.imageFile)
-                : eq.imageUrl,
-            }
-          : eq
-      )
-    );
+  // EquipmentContext.tsx
+  const updateEquipment = async (id: string, data: EquipmentFormData) => {
+    if (!id || id.trim() === "") {
+      throw new Error("Invalid equipment ID");
+    }
+    try {
+      const updatedEquipment = await equipmentService.updateEquipment(id, {
+        ...data,
+        equipmentPhoto: data.imageFile,
+      });
+      setEquipments((prev) =>
+        prev.map((eq) => (eq.id === id ? updatedEquipment : eq))
+      );
+    } catch (error) {
+      console.error("Error updating equipment:", error);
+      throw error;
+    }
   };
 
-  const deleteEquipment = (id: string) => {
-    setEquipments((prev) => prev.filter((eq) => eq.id !== id));
+  const deleteEquipment = async (id: string) => {
+    if (!id || id.trim() === "") {
+      throw new Error("Invalid equipment ID");
+    }
+    try {
+      await equipmentService.deleteEquipment(id);
+      setEquipments((prev) => prev.filter((eq) => eq.id !== id));
+    } catch (error) {
+      console.error("Error deleting equipment:", error);
+      throw error;
+    }
   };
 
   return (

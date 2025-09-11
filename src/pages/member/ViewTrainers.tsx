@@ -1,3 +1,4 @@
+// src/pages/ViewTrainers.tsx (Updated content)
 import { useState, useEffect } from 'react';
 import {
   Card,
@@ -5,40 +6,117 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "lucide-react";
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Search, Star, Mail, Phone } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { trainerService } from '@/services/trainerService'; // Ensure correct path
+// Import TrainerResponseDto and the new method
+import { trainerService, TrainerResponseDto } from '@/services/trainerService';
 import { Mail as MailIcon, Phone as PhoneIcon } from 'lucide-react';
+import Cookies from 'js-cookie';
 
-interface TrainerResponseDto {
-  id: number;
-  name: string;
-  email: string;
-  phone: string;
-  status: string;
+// Define an interface for the trainer data we'll display, including rating
+// This extends the existing TrainerResponseDto to add rating information
+interface DisplayTrainer extends TrainerResponseDto {
+  averageRating: number;
+  // If you can fetch a rating count, you could add it here too, e.g.:
+  // ratingCount: number;
 }
 
+// Interface for the average rating response from the backend (as defined in trainerService.ts)
+interface AverageRatingResponse {
+  averageRating: number;
+}
+
+
 export default function ViewTrainers() {
-  const [trainers, setTrainers] = useState<TrainerResponseDto[]>([]);
+  const [trainers, setTrainers] = useState<DisplayTrainer[]>([]); // Use the new interface
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
+  const [trainerImages, setTrainerImages] = useState<Record<number, string>>({});
 
   useEffect(() => {
-    const fetchTrainers = async () => {
+    const fetchTrainerImages = async () => {
+      const token = Cookies.get('token'); // or Cookies.get("token")
+      if (!token) return;
+
+      const newImages: Record<number, string> = {};
+      for (const trainer of trainers) {
+        if (trainer.avatarUrl) {
+          try {
+            const res = await fetch(trainer.avatarUrl, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            if (res.ok) {
+              const blob = await res.blob();
+              newImages[trainer.id] = URL.createObjectURL(blob);
+            }
+          } catch (err) {
+            console.error(`Failed to load avatar for trainer ${trainer.name}`, err);
+          }
+        }
+      }
+      setTrainerImages(newImages);
+    };
+
+    if (trainers.length > 0) {
+      fetchTrainerImages();
+    }
+  }, [trainers]);
+
+
+  useEffect(() => {
+    const fetchTrainersAndRatings = async () => {
       try {
-        const data = await trainerService.getAllActiveTrainers();
-        if (data && data.data) {
-          setTrainers(data.data);
-        } else {
-          console.error("Unexpected data structure:", data);
+        // Fetch all active trainers first
+        const trainerData = await trainerService.getAllActiveTrainers();
+        if (!trainerData || !trainerData.data) {
+          console.error("Unexpected data structure from getAllActiveTrainers:", trainerData);
           toast({
             title: "Error fetching trainers",
             description: "Unexpected data format from the server.",
             variant: "destructive",
           });
+          return;
         }
+
+        const activeTrainers: TrainerResponseDto[] = trainerData.data;
+
+        // Fetch average rating for each trainer
+        // Promise.all allows fetching ratings concurrently for better performance
+        const trainersWithRatings: DisplayTrainer[] = await Promise.all(
+          activeTrainers.map(async (trainer) => {
+            try {
+              // Call the new service method to get the average rating
+              const ratingResponse = await trainerService.getTrainerAverageRating(trainer.id);
+              // If you had a way to fetch the count of ratings, you'd include it here
+              return {
+                ...trainer,
+                averageRating: ratingResponse.averageRating,
+                // ratingCount: ratingResponse.ratingCount || 0 // Placeholder if count is not available
+              };
+            } catch (ratingError) {
+              console.warn(`Could not fetch rating for trainer ${trainer.id}:`, ratingError);
+              // Assign a default rating (0.0) if fetching fails or if no ratings exist
+              return {
+                ...trainer,
+                averageRating: 0.0,
+                // ratingCount: 0
+              };
+            }
+          })
+        );
+        setTrainers(trainersWithRatings);
+
       } catch (error) {
         console.error("Failed to fetch trainers:", error);
         toast({
@@ -49,8 +127,8 @@ export default function ViewTrainers() {
       }
     };
 
-    fetchTrainers();
-  }, [toast]);
+    fetchTrainersAndRatings();
+  }, [toast]); // toast is a dependency for the hook
 
   const filteredTrainers = trainers.filter((trainer) =>
     trainer.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -77,7 +155,10 @@ export default function ViewTrainers() {
     }
   };
 
-  const renderStars = (rating: number) => (
+  // Modified renderStars to accept the fetched rating and display it.
+  // The 'count' parameter can be used if you have that data.
+  // For now, we'll display the average rating value itself if no count.
+  const renderStars = (rating: number, count?: number) => (
     <div className="flex items-center space-x-1">
       {[1, 2, 3, 4, 5].map((star) => (
         <Star
@@ -86,7 +167,14 @@ export default function ViewTrainers() {
             }`}
         />
       ))}
-      <span className="text-sm text-muted-foreground ml-1">({rating})</span>
+      {/* Display count if available and greater than 0 */}
+      {count !== undefined && count > 0 && (
+        <span className="text-sm text-muted-foreground ml-1">({count})</span>
+      )}
+      {/* If count is 0, undefined, or not relevant, show the average rating value */}
+      {(count === undefined || count === 0) && (
+        <span className="text-sm text-muted-foreground ml-1">{rating.toFixed(1)}</span>
+      )}
     </div>
   );
 
@@ -115,12 +203,21 @@ export default function ViewTrainers() {
             <CardHeader>
               <div className="flex justify-between items-start">
                 <div className="flex items-center space-x-4">
-                  <div className="w-16 h-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xl font-bold">
-                    {trainer.name
-                      .split(' ')
-                      .map((n) => n[0])
-                      .join('')}
-                  </div>
+                  {trainerImages[trainer.id] ? (
+                    <img
+                      src={trainerImages[trainer.id]}
+                      alt={trainer.name}
+                      className="w-16 h-16 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-16 h-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xl font-bold">
+                      {trainer.name
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")}
+                    </div>
+                  )}
+
                   <div>
                     <CardTitle>{trainer.name}</CardTitle>
                     <div className="flex items-center space-x-4 text-sm text-muted-foreground mt-1">
@@ -133,20 +230,36 @@ export default function ViewTrainers() {
                         {trainer.phone}
                       </div>
                     </div>
-                    {renderStars(5)}
+                    {/* Render stars using the fetched averageRating */}
+                    {/* If you can fetch a rating count, pass it as the second argument */}
+                    {renderStars(trainer.averageRating /*, trainer.ratingCount */)}
                   </div>
                 </div>
-                {getAvailabilityBadge('available')}
+                {getAvailabilityBadge(trainer.status)} {/* Assuming status maps to availability */}
               </div>
             </CardHeader>
             <CardContent className="pt-2">
-              {/* Removed Book Session button */}
+              <Dialog>
+                <DialogTrigger asChild>
+
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Book Session with {trainer.name}</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                      This feature is coming soon!
+                    </p>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </CardContent>
           </Card>
         ))}
 
         {filteredTrainers.length === 0 && (
-          <div className="text-center py-8">
+          <div className="text-center py-8 col-span-full"> {/* col-span-full to center */}
             <span className="text-muted-foreground">No trainers found</span>
           </div>
         )}
@@ -154,3 +267,4 @@ export default function ViewTrainers() {
     </div>
   );
 }
+

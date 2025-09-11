@@ -27,6 +27,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useTrainers } from "@/context/TrainerContext";
 import { salaryService } from "@/services/salaryService";
+import Cookies from "js-cookie";
 
 export default function PaySalary() {
   const { toast } = useToast();
@@ -41,11 +42,50 @@ export default function PaySalary() {
   // NEW: State to hold the history for the selected trainer
   const [trainerPaymentHistory, setTrainerPaymentHistory] = useState<any[]>([]);
 
+  const [avatarUrls, setAvatarUrls] = useState<Record<number, string>>({});
+
   const hourlyRates: Record<string, number> = {
     Trainer: 20,
     Administrator: 30,
     Receptionist: 15,
   };
+
+  useEffect(() => {
+    const fetchSalaryAvatars = async () => {
+      const token = Cookies.get('token');
+      if (!token || allSalaries.length === 0) return;
+
+      const newAvatars: Record<number, string> = {};
+
+      await Promise.all(
+        allSalaries.map(async (salary) => {
+          if (salary.trainerAvatarUrl && !avatarUrls[salary.trainerId]) {
+            try {
+              const response = await fetch(salary.trainerAvatarUrl, {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              });
+              if (response.ok) {
+                const blob = await response.blob();
+                newAvatars[salary.trainerId] = URL.createObjectURL(blob);
+              } else {
+                console.error(
+                  `Failed to fetch avatar for trainer ${salary.trainerId}: ${response.statusText}`
+                );
+              }
+            } catch (err) {
+              console.error(`Error fetching avatar for trainer ${salary.trainerId}:`, err);
+            }
+          }
+        })
+      );
+
+      setAvatarUrls((prev) => ({ ...prev, ...newAvatars }));
+    };
+
+    fetchSalaryAvatars();
+  }, [allSalaries]);
 
   // Fetch trainers (no change)
   useEffect(() => {
@@ -149,10 +189,11 @@ export default function PaySalary() {
 
     // Find the most recent PAID salary record to determine the "Last Paid" date
     const paidSalaries = allSalaries
-      .filter(s => s.trainerId.toString() === trainerId && s.status === "PAID")
+      .filter(s => s.trainerId === trainerId && s.status === "PAID")
       .sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime());
 
     console.log("Paid Salaries for Trainer ID", trainerId, ":", paidSalaries);
+
     return {
       status: currentRecord?.status || "PENDING", // Default to PENDING if no record is found for this month yet
       lastPaid: paidSalaries.length > 0 ? paidSalaries[0].paymentDate : "N/A",
@@ -201,17 +242,29 @@ export default function PaySalary() {
               const calculatedSalary = calculateSalary(trainer);
               const salaryInfo = getTrainerSalaryInfo(trainer.id);
 
+              const trainerSalaryData = allSalaries.find(
+                (s) => s.trainerId.toString() === trainer.id.toString()
+              );
               return (
                 <div key={trainer.id} className="flex flex-wrap items-center justify-between gap-4 p-4 bg-muted/50 rounded-lg">
                   {/* Trainer Info */}
                   <div className="flex items-center space-x-4">
-                    <div className="h-12 w-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-lg font-medium">
-                      {trainer.name.split(" ").map((n: string) => n[0]).join("")}
-                    </div>
+                    {avatarUrls[trainer.id] ? (
+                      <img
+                        src={avatarUrls[trainer.id]}
+                        alt={trainer.name}
+                        className="h-12 w-12 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="h-12 w-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-lg font-medium">
+                        {trainer.name.split(" ").map((n: string) => n[0]).join("")}
+                      </div>
+                    )}
                     <div>
                       <p className="font-medium text-foreground">{trainer.name}</p>
-                      <p className="text-sm text-muted-foreground">{trainer.role || "Trainer"}</p>
-                      <p className="text-xs text-muted-foreground">Last paid: {salaryInfo.lastPaid}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {trainerSalaryData?.trainerEmail || "No email"}
+                      </p>
                     </div>
                   </div>
 

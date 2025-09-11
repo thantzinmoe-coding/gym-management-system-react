@@ -1,30 +1,25 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Trash2, Edit3, Calendar, Wrench } from "lucide-react";
-
-export interface Equipment {
-  id: string;
-  name: string;
-  purchaseDate: string;
-  condition: "Excellent" | "Good" | "Fair" | "Poor";
-  lastMaintenanceDate: string;
-  nextMaintenanceDate: string;
-  imageUrl?: string;
-}
+import { useEquipments, Equipment } from "@/context/EquipmentContext";
+import { parseISO, format } from 'date-fns'; // Import date-fns
+import Cookies from "js-cookie";
 
 interface EquipmentCardProps {
   equipment: Equipment;
-  onDelete: (id: string) => void;
-  onEdit: (equipment: Equipment) => void;
+  onEdit: (equipment: Equipment) => void; // ADDED: onEdit prop
 }
 
-export const EquipmentCard = ({ equipment, onDelete, onEdit }: EquipmentCardProps) => {
+
+export const EquipmentCard = ({ equipment, onEdit }: EquipmentCardProps) => { // ADDED: onEdit to props
   const [imageError, setImageError] = useState(false);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const { deleteEquipment, updateEquipment } = useEquipments();
 
   const getConditionVariant = (condition: string) => {
-    switch (condition.toLowerCase()) {
+    switch (condition?.toLowerCase()) {
       case "excellent":
         return "default";
       case "good":
@@ -38,6 +33,42 @@ export const EquipmentCard = ({ equipment, onDelete, onEdit }: EquipmentCardProp
     }
   };
 
+  useEffect(() => {
+    const loadImage = async () => {
+      if (equipment.imageUrl) {
+        try {
+          const token = Cookies.get("token");
+          console.log(token)
+          const response = await fetch(equipment.imageUrl, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+          if (response.ok) {
+            const blob = await response.blob();
+            setImageUrl(URL.createObjectURL(blob));
+          } else {
+            setImageError(true);
+          }
+        } catch (err) {
+          console.error("Failed to load equipment image:", err);
+          setImageError(true);
+        }
+      }
+    };
+
+    loadImage();
+  }, [equipment.imageUrl]);
+
+  const handleDelete = (id: string) => {
+    deleteEquipment(id);
+  };
+
+  const handleEdit = (equipment: Equipment) => {
+    console.log("Edit equipment:", equipment.id);
+    onEdit(equipment); // Called the onEdit function
+  };
+
   return (
     <Card className="h-48 w-full max-w-sm">
       <CardHeader className="pb-4">
@@ -49,7 +80,7 @@ export const EquipmentCard = ({ equipment, onDelete, onEdit }: EquipmentCardProp
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => onEdit(equipment)}
+              onClick={() => handleEdit(equipment)}
               className="h-8 w-8 p-0"
             >
               <Edit3 className="h-4 w-4" />
@@ -57,7 +88,7 @@ export const EquipmentCard = ({ equipment, onDelete, onEdit }: EquipmentCardProp
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => onDelete(equipment.id)}
+              onClick={() => handleDelete(equipment.id)}
               className="h-8 w-8 p-0 text-destructive hover:text-destructive"
             >
               <Trash2 className="h-4 w-4" />
@@ -65,13 +96,13 @@ export const EquipmentCard = ({ equipment, onDelete, onEdit }: EquipmentCardProp
           </div>
         </div>
       </CardHeader>
-      
+
       <CardContent className="space-y-4">
         {/* Equipment Image */}
         <div className="aspect-video w-full bg-muted rounded-md overflow-hidden">
-          {equipment.imageUrl && !imageError ? (
+          {imageUrl && !imageError ? (
             <img
-              src={equipment.imageUrl}
+              src={imageUrl}
               alt={equipment.name}
               className="w-full h-full object-cover"
               onError={() => setImageError(true)}
@@ -87,29 +118,29 @@ export const EquipmentCard = ({ equipment, onDelete, onEdit }: EquipmentCardProp
         <div className="space-y-2">
           <div className="flex justify-between items-center">
             <span className="text-sm font-medium">Condition:</span>
-            <Badge variant={getConditionVariant(equipment.condition)}>
-              {equipment.condition}
+            <Badge variant={getConditionVariant(equipment.equipmentCondition)}>
+              {equipment.equipmentCondition}
             </Badge>
           </div>
-          
+
           <div className="space-y-1 text-sm">
             <div className="flex items-center gap-2">
               <Calendar className="h-3 w-3" />
               <span className="text-muted-foreground">Purchased:</span>
-              <span>{new Date(equipment.purchaseDate).toLocaleDateString()}</span>
+              <span>{format(parseISO(equipment.purchaseDate), 'MM/dd/yyyy')}</span>
             </div>
-            
+
             <div className="flex items-center gap-2">
               <Wrench className="h-3 w-3" />
               <span className="text-muted-foreground">Last Maintenance:</span>
-              <span>{new Date(equipment.lastMaintenanceDate).toLocaleDateString()}</span>
+              <span>{format(parseISO(equipment.lastMaintenanceDate), 'MM/dd/yyyy')}</span>
             </div>
-            
+
             <div className="flex items-center gap-2">
               <Calendar className="h-3 w-3" />
               <span className="text-muted-foreground">Next Maintenance:</span>
               <span className="font-medium">
-                {new Date(equipment.nextMaintenanceDate).toLocaleDateString()}
+                {format(parseISO(equipment.nextMaintenanceDate), 'MM/dd/yyyy')}
               </span>
             </div>
           </div>
