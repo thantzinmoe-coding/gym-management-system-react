@@ -76,7 +76,7 @@ export default function TrainerProfileSetup() {
       if (success != null && response != null) {
         toast({
           title: "Application Submitted!",
-          description: "Your trainer application has been submitted for admin approval.",
+          description: "Your trainer application has been submitted. Wait for admin approval.",
         });
       } else {
         toast({

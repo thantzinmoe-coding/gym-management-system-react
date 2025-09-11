@@ -6,6 +6,15 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "lucide-react";
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Search, Star, Mail, Phone } from 'lucide-react';
@@ -13,6 +22,7 @@ import { useToast } from '@/hooks/use-toast';
 // Import TrainerResponseDto and the new method
 import { trainerService, TrainerResponseDto } from '@/services/trainerService';
 import { Mail as MailIcon, Phone as PhoneIcon } from 'lucide-react';
+import Cookies from 'js-cookie';
 
 // Define an interface for the trainer data we'll display, including rating
 // This extends the existing TrainerResponseDto to add rating information
@@ -32,6 +42,37 @@ export default function ViewTrainers() {
   const [trainers, setTrainers] = useState<DisplayTrainer[]>([]); // Use the new interface
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
+  const [trainerImages, setTrainerImages] = useState<Record<number, string>>({});
+
+  useEffect(() => {
+    const fetchTrainerImages = async () => {
+      const token = Cookies.get('token'); // or Cookies.get("token")
+      if (!token) return;
+
+      const newImages: Record<number, string> = {};
+      for (const trainer of trainers) {
+        if (trainer.avatarUrl) {
+          try {
+            const res = await fetch(trainer.avatarUrl, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            if (res.ok) {
+              const blob = await res.blob();
+              newImages[trainer.id] = URL.createObjectURL(blob);
+            }
+          } catch (err) {
+            console.error(`Failed to load avatar for trainer ${trainer.name}`, err);
+          }
+        }
+      }
+      setTrainerImages(newImages);
+    };
+
+    if (trainers.length > 0) {
+      fetchTrainerImages();
+    }
+  }, [trainers]);
+
 
   useEffect(() => {
     const fetchTrainersAndRatings = async () => {
@@ -162,12 +203,21 @@ export default function ViewTrainers() {
             <CardHeader>
               <div className="flex justify-between items-start">
                 <div className="flex items-center space-x-4">
-                  <div className="w-16 h-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xl font-bold">
-                    {trainer.name
-                      .split(' ')
-                      .map((n) => n[0])
-                      .join('')}
-                  </div>
+                  {trainerImages[trainer.id] ? (
+                    <img
+                      src={trainerImages[trainer.id]}
+                      alt={trainer.name}
+                      className="w-16 h-16 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-16 h-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xl font-bold">
+                      {trainer.name
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")}
+                    </div>
+                  )}
+
                   <div>
                     <CardTitle>{trainer.name}</CardTitle>
                     <div className="flex items-center space-x-4 text-sm text-muted-foreground mt-1">
@@ -191,14 +241,7 @@ export default function ViewTrainers() {
             <CardContent className="pt-2">
               <Dialog>
                 <DialogTrigger asChild>
-                  <Button
-                    size="sm"
-                    disabled={false} // Adjust based on trainer availability or other logic
-                    className="flex-1 bg-slate-800 hover:bg-slate-700 text-white"
-                  >
-                    <Calendar className="h-4 w-4 mr-2" />
-                    Book Session
-                  </Button>
+
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>

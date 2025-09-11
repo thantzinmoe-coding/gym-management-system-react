@@ -1,5 +1,6 @@
+// EquipmentContext.tsx
 import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
-import { equipmentService } from "@/services/equipmentService"; // Import the service
+import { equipmentService } from "@/services/equipmentService";
 
 export interface Equipment {
   id: string;
@@ -36,6 +37,7 @@ export const EquipmentProvider = ({ children }: { children: ReactNode }) => {
     const fetchEquipments = async () => {
       try {
         const equipmentsData = await equipmentService.getAllEquipments();
+        console.log("Fetched Equipments:", equipmentsData);
         setEquipments(equipmentsData);
       } catch (error) {
         console.error("Error fetching equipments:", error);
@@ -47,19 +49,29 @@ export const EquipmentProvider = ({ children }: { children: ReactNode }) => {
 
   const addEquipment = async (data: EquipmentFormData) => {
     try {
-      const newEquipmentResponse = await equipmentService.addEquipment(data);
-      setEquipments((prev) => [...prev, newEquipmentResponse]);
+      const newEquipment = await equipmentService.addEquipment({
+        ...data,
+        equipmentPhoto: data.imageFile,
+      });
+      setEquipments((prev) => [...prev, newEquipment]);
     } catch (error) {
       console.error("Error adding equipment:", error);
       throw error;
     }
   };
 
+  // EquipmentContext.tsx
   const updateEquipment = async (id: string, data: EquipmentFormData) => {
+    if (!id || id.trim() === "") {
+      throw new Error("Invalid equipment ID");
+    }
     try {
-      const updatedEquipmentResponse = await equipmentService.updateEquipment(id, data);
+      const updatedEquipment = await equipmentService.updateEquipment(id, {
+        ...data,
+        equipmentPhoto: data.imageFile,
+      });
       setEquipments((prev) =>
-        prev.map((eq) => (eq.id === id ? updatedEquipmentResponse : eq))
+        prev.map((eq) => (eq.id === id ? updatedEquipment : eq))
       );
     } catch (error) {
       console.error("Error updating equipment:", error);
@@ -68,6 +80,9 @@ export const EquipmentProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const deleteEquipment = async (id: string) => {
+    if (!id || id.trim() === "") {
+      throw new Error("Invalid equipment ID");
+    }
     try {
       await equipmentService.deleteEquipment(id);
       setEquipments((prev) => prev.filter((eq) => eq.id !== id));

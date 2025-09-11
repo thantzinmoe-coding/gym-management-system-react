@@ -89,7 +89,7 @@ export default function MemberProfileSetup() {
           title: "Profile Created Successfully!",
           description: "Welcome to our gym! Your member profile has been set up.",
         });
-        navigate(`/${role.toLowerCase()}/dashboard`);
+        navigate(`/login`, { replace: true });
       } else {
         toast({
           title: "Error",
@@ -260,9 +260,9 @@ export default function MemberProfileSetup() {
               />
             </div>
 
-            <Button 
-              type="submit" 
-              className="w-full" 
+            <Button
+              type="submit"
+              className="w-full"
               disabled={isSubmitting}
               size="lg"
             >

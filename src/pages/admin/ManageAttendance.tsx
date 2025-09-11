@@ -46,6 +46,17 @@ export default function ManageAttendance() {
         item.userName.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
+    const formatTime = (timeString: string | null) => {
+        if (!timeString) return '-';
+        // Create a Date using today's date + given time
+        const [hours, minutes] = timeString.split(':');
+        const date = new Date();
+        date.setHours(parseInt(hours), parseInt(minutes));
+        return format(date, 'hh:mm a'); // 12-hour format with AM/PM
+        // return format(date, 'HH:mm'); // (for 24-hour format if you prefer)
+    };
+
+
     useEffect(() => {
         fetchAttendanceData();
         fetchUsers();
@@ -73,11 +84,11 @@ export default function ManageAttendance() {
 
     const handleAddRecord = async () => {
         // For absent trainers, we only need userId, date, and attendanceType
-        const isValidAbsent = newRecord.status === 'absent' && 
+        const isValidAbsent = newRecord.status === 'absent' &&
             newRecord.userId && newRecord.date && newRecord.attendanceType === AttendanceType.TRAINER;
 
         // For present trainers, we need timeIn as well
-        const isValidPresent = newRecord.status === 'present' && 
+        const isValidPresent = newRecord.status === 'present' &&
             newRecord.attendanceType === AttendanceType.TRAINER &&
             newRecord.userId && newRecord.date && newRecord.timeIn;
 
@@ -95,7 +106,7 @@ export default function ManageAttendance() {
                 };
 
                 const newRecordResponse = await attendanceService.addAttendance(recordToSend);
-                
+
                 // If it's an absent record, we might need to update it to reflect absent status
                 const recordToAdd = {
                     ...newRecordResponse,
@@ -276,7 +287,7 @@ export default function ManageAttendance() {
                                         </SelectContent>
                                     </Select>
                                 </div>
-                                
+
                                 <div>
                                     <Label htmlFor="date">Date</Label>
                                     <Input
@@ -346,7 +357,6 @@ export default function ManageAttendance() {
                             </div>
                         </DialogContent>
                     </Dialog>
-                    <Button variant="outline">Export Report</Button>
                 </div>
             </div>
 
@@ -381,13 +391,13 @@ export default function ManageAttendance() {
                                     <div className="text-center">
                                         <p className="text-sm font-medium">Check In</p>
                                         <p className="text-sm text-muted-foreground">
-                                            {record.status === 'absent' ? '-' : record.timeIn}
+                                            {record.status === 'absent' ? '-' : formatTime(record.timeIn)}
                                         </p>
                                     </div>
                                     <div className="text-center">
                                         <p className="text-sm font-medium">Check Out</p>
                                         <p className="text-sm text-muted-foreground">
-                                            {record.status === 'absent' ? '-' : (record.timeOut || '-')}
+                                            {record.status === 'absent' ? '-' : formatTime(record.timeOut)}
                                         </p>
                                     </div>
                                     <div className="text-center">
@@ -397,10 +407,10 @@ export default function ManageAttendance() {
                                         </p>
                                     </div>
                                     {getStatusBadge(record)}
-                                    <Button 
-                                        variant="outline" 
-                                        size="sm" 
-                                        onClick={() => handleEdit(record)} 
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleEdit(record)}
                                         disabled={record.timeOut != null || record.status === 'absent'}
                                     >
                                         <Edit className="h-4 w-4" />

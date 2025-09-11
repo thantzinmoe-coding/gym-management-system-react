@@ -117,43 +117,6 @@ const Reviews = () => {
         ) : (
           <>
             {/* Review Statistics */}
-            {stats && (
-              <Card className="p-8 mb-12">
-                <div className="grid md:grid-cols-2 gap-8">
-                  <div className="text-center md:text-left">
-                    <div className="flex items-center justify-center md:justify-start mb-4">
-                      <span className="text-4xl font-bold mr-2">{stats.averageRating}</span>
-                      <div>
-                        <div className="flex">{renderStars(Math.round(stats.averageRating))}</div>
-                        <p className="text-sm text-muted-foreground">{stats.totalReviews} reviews</p>
-                      </div>
-                    </div>
-                    <p className="text-muted-foreground">
-                      Based on {stats.totalReviews} verified member reviews
-                    </p>
-                  </div>
-
-                  <div>
-                    <h3 className="font-semibold mb-4">Rating Breakdown</h3>
-                    {stats?.ratingBreakdown && Object.entries(stats.ratingBreakdown)
-                      .sort(([a], [b]) => parseInt(b) - parseInt(a))
-                      .map(([rating, count]) => (
-                        <div key={rating} className="flex items-center mb-2">
-                          <span className="w-8 text-sm">{rating}★</span>
-                          <div className="flex-1 bg-muted rounded-full h-2 mx-3">
-                            <div
-                              className="bg-primary h-2 rounded-full"
-                              style={{ width: `${(count / stats.totalReviews) * 100}%` }}
-                            />
-                          </div>
-                          <span className="text-sm text-muted-foreground w-8">{count}</span>
-                        </div>
-                      ))}
-
-                  </div>
-                </div>
-              </Card>
-            )}
 
             {/* Reviews Grid */}
             <div className="grid lg:grid-cols-2 gap-8 mb-12">

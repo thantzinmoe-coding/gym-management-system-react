@@ -9,10 +9,10 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { manageUserService } from "@/services/manageUserService";
 import { trainerService } from "@/services/trainerService";
 import { equipmentService } from "@/services/equipmentService";
-// 🔹 (If you have packageService, import it here)
+import { gymPackageService } from "@/services/gymPackageService";
+// import { gymPackageService } from "@/services/gymPackageService"; // if you want real count
 
 export default function AdminDashboard() {
-  // ✅ Dynamic state
   const [stats, setStats] = useState({
     members: 0,
     trainers: 0,
@@ -22,23 +22,24 @@ export default function AdminDashboard() {
 
   const [loading, setLoading] = useState(true);
 
-  // ✅ Fetch from backend
   useEffect(() => {
     const fetchStats = async () => {
       try {
         // Members
-      const usersResponse = await manageUserService.getAllUsers(0, 10, undefined, "MEMBER", "active"); 
-const membersCount = usersResponse.meta?.totalElements || usersResponse.meta?.totalItems || 0;
+        const usersResponse = await manageUserService.getAllUsers(0, 10, undefined, "MEMBER", "active");
+        const membersCount = usersResponse.meta?.totalElements || usersResponse.meta?.totalItems || 0;
 
         // Trainers
-        const trainersResponse = await trainerService.getAllActiveTrainers(0, 1); 
+        const trainersResponse = await trainerService.getAllActiveTrainers(0, 1);
         const trainersCount = trainersResponse.meta?.totalItems || trainersResponse.data?.length || 0;
 
-         const equipmentCount = await equipmentService.getEquipmentCount(); // backend already paginated, but you can add meta if available
+        // Equipment
+        const equipmentCount = await equipmentService.getEquipmentCount();
 
-        // Packages (replace with your packageService if exists)
-        // For now, mock:
-        const packagesCount = 8; 
+        const totalPackagesResponse = await gymPackageService.getAllGymPackages(0, 1);
+        const packagesCount = totalPackagesResponse.meta?.totalItems || totalPackagesResponse.data?.length || 0;
+
+        // Packages (replace with serv
 
         setStats({
           members: membersCount,
@@ -63,7 +64,6 @@ const membersCount = usersResponse.meta?.totalElements || usersResponse.meta?.to
     { title: "Package Plans", value: stats.packages, icon: Package, color: "text-orange-600" },
   ];
 
-  // ✅ Bar chart data
   const chartData = [
     {
       name: "Gym Stats",
@@ -82,7 +82,7 @@ const membersCount = usersResponse.meta?.totalElements || usersResponse.meta?.to
         <p className="text-muted-foreground">Manage your gym operations from here</p>
       </div>
 
-      {/* ✅ Stats Cards */}
+      {/* ✅ Stats Cards (4 aligned cards) */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {statCards.map((stat, index) => (
           <Card key={index}>
@@ -91,42 +91,34 @@ const membersCount = usersResponse.meta?.totalElements || usersResponse.meta?.to
               <stat.icon className={`h-4 w-4 ${stat.color}`} />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {loading ? "..." : stat.value}
-              </div>
+              <div className="text-2xl font-bold">{loading ? "..." : stat.value}</div>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      {/* ✅ Chart + Quick Actions Side by Side */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Bar Chart */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Gym Overview</CardTitle>
-            <CardDescription>Members, Trainers, Equipment, and Packages</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="Members" fill="#3b82f6" />
-                <Bar dataKey="Trainers" fill="#22c55e" />
-                <Bar dataKey="Equipment" fill="#a855f7" />
-                <Bar dataKey="Packages" fill="#f97316" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        {/* Quick Actions */}
-        
-      </div>
+      {/* ✅ Chart aligned below stats */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Gym Overview</CardTitle>
+          <CardDescription>Members, Trainers, Equipment, and Packages</CardDescription>
+        </CardHeader>
+        <CardContent className="h-[350px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="Members" fill="#3b82f6" />
+              <Bar dataKey="Trainers" fill="#22c55e" />
+              <Bar dataKey="Equipment" fill="#a855f7" />
+              <Bar dataKey="Packages" fill="#f97316" />
+            </BarChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
     </div>
   );
 }

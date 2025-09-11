@@ -1,7 +1,7 @@
 // src/services/manageUserService.ts
 import api from '@/services/api';
 
-const userUrl = 'api/v1/super_admin';
+const userUrl = '/api/v1/super_admin';
 // Relative to baseURL in api.ts
 
 export type Status = 'ACTIVE' | 'INACTIVE';
@@ -18,6 +18,10 @@ export type BackendUser = {
   gender?: string;
   specialization?: string;
   experience?: string;
+  packageName?: string | null; // Note: changed to string | null
+  weight?: number;
+  height?: number;
+  goal?: string;
   role: string; // e.g. MEMBER, TRAINER, ADMIN
   avatarUrl?: string | null;
   status: Status;
@@ -53,7 +57,7 @@ export const manageUserService = {
     size: number = 20,
     keyword?: string,
     role?: string, // This parameter is used to filter by role
-    status?: string
+    status: string = 'active'
   ) => {
     try {
       let url = `${userUrl}/all-users?page=${page}&size=${size}`;
@@ -174,6 +178,18 @@ export const manageUserService = {
     } catch (error) {
       console.error('Error fetching available trainers:', error);
       throw error.response?.data || { message: 'Failed to fetch available trainers' };
+    }
+  },
+
+  getBookedUsersByTrainer: async (trainerId: number, page: number = 0, size: number = 20) => {
+    try {
+      const response = await api.get(
+        `/api/v1/book-package/${trainerId}/booked-users?page=${page}&size=${size}`
+      );
+      return response.data as PaginatedApiResponse<BackendUser>;
+    } catch (error) {
+      console.error(`Error fetching booked users for trainer ${trainerId}:`, error);
+      throw error.response?.data || { message: 'Failed to fetch booked users' };
     }
   },
 };

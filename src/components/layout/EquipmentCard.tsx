@@ -1,18 +1,21 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Trash2, Edit3, Calendar, Wrench } from "lucide-react";
 import { useEquipments, Equipment } from "@/context/EquipmentContext";
 import { parseISO, format } from 'date-fns'; // Import date-fns
+import Cookies from "js-cookie";
 
 interface EquipmentCardProps {
   equipment: Equipment;
   onEdit: (equipment: Equipment) => void; // ADDED: onEdit prop
 }
 
+
 export const EquipmentCard = ({ equipment, onEdit }: EquipmentCardProps) => { // ADDED: onEdit to props
   const [imageError, setImageError] = useState(false);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const { deleteEquipment, updateEquipment } = useEquipments();
 
   const getConditionVariant = (condition: string) => {
@@ -29,6 +32,33 @@ export const EquipmentCard = ({ equipment, onEdit }: EquipmentCardProps) => { //
         return "secondary";
     }
   };
+
+  useEffect(() => {
+    const loadImage = async () => {
+      if (equipment.imageUrl) {
+        try {
+          const token = Cookies.get("token");
+          console.log(token)
+          const response = await fetch(equipment.imageUrl, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+          if (response.ok) {
+            const blob = await response.blob();
+            setImageUrl(URL.createObjectURL(blob));
+          } else {
+            setImageError(true);
+          }
+        } catch (err) {
+          console.error("Failed to load equipment image:", err);
+          setImageError(true);
+        }
+      }
+    };
+
+    loadImage();
+  }, [equipment.imageUrl]);
 
   const handleDelete = (id: string) => {
     deleteEquipment(id);
@@ -66,13 +96,13 @@ export const EquipmentCard = ({ equipment, onEdit }: EquipmentCardProps) => { //
           </div>
         </div>
       </CardHeader>
-      
+
       <CardContent className="space-y-4">
         {/* Equipment Image */}
         <div className="aspect-video w-full bg-muted rounded-md overflow-hidden">
-          {equipment.imageUrl && !imageError ? (
+          {imageUrl && !imageError ? (
             <img
-              src={equipment.imageUrl}
+              src={imageUrl}
               alt={equipment.name}
               className="w-full h-full object-cover"
               onError={() => setImageError(true)}
@@ -92,20 +122,20 @@ export const EquipmentCard = ({ equipment, onEdit }: EquipmentCardProps) => { //
               {equipment.equipmentCondition}
             </Badge>
           </div>
-          
+
           <div className="space-y-1 text-sm">
             <div className="flex items-center gap-2">
               <Calendar className="h-3 w-3" />
               <span className="text-muted-foreground">Purchased:</span>
               <span>{format(parseISO(equipment.purchaseDate), 'MM/dd/yyyy')}</span>
             </div>
-            
+
             <div className="flex items-center gap-2">
               <Wrench className="h-3 w-3" />
               <span className="text-muted-foreground">Last Maintenance:</span>
               <span>{format(parseISO(equipment.lastMaintenanceDate), 'MM/dd/yyyy')}</span>
             </div>
-            
+
             <div className="flex items-center gap-2">
               <Calendar className="h-3 w-3" />
               <span className="text-muted-foreground">Next Maintenance:</span>

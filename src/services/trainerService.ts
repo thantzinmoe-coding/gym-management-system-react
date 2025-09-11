@@ -13,6 +13,7 @@ export interface TrainerResponseDto {
     email: string;
     phone: string;
     status: string;
+    avatarUrl?: string;
     // Add any other relevant fields from your backend's trainer DTO
 }
 
@@ -72,13 +73,47 @@ export const trainerService = {
         }
     },
 
-    getTotalMemberCount: async (trainerId: number): Promise<number> => {
+    getTotalMemberCount: async (trainerId: number) => {
         try {
             const response = await api.get<{ count: number }>(`/api/v1/book-package/trainer/${trainerId}/user-count`);
-            return response.data.count;
+            return response.data;
         } catch (error: any) {
             console.error(`Error fetching total members for trainer ${trainerId}:`, error);
             throw new Error(error.response?.data?.message || 'Failed to fetch total member count');
+        }
+    },
+
+    acceptTrainerApplication: async (trainerId: number) => {
+        try {
+            const response = await api.patch(
+                `${trainerUrl}/accept-trainer-application/${trainerId}`
+            );
+            return response.data;
+        } catch (error) {
+            console.error(`Error accepting trainer application ${trainerId}:`, error);
+            throw error.response?.data || { message: 'Failed to accept trainer application' };
+        }
+    },
+
+    getTrainerApplications: async (role: string = "trainer", status: string = "pending", page: number = 0, size: number = 20) => {
+        try {
+            const response = await api.get(
+                `${trainerUrl}/all-users?role=${role}&status=${status}&page=${page}&size=${size}`
+            );
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching trainer applications: ', error);
+            throw error.response?.data || { message: 'Failed to fetch trainer applications' };
+        }
+    },
+
+    getAllAvailableTrainers: async (page: number = 0, size: number = 20) => {
+        try {
+            const response = await api.get(`${trainerUrl}/all-available-trainers?page=${page}&size=${size}`);
+            return response.data; // Returns the entire data object
+        } catch (error) {
+            console.error('Error fetching available trainers:', error);
+            throw error.response?.data || { message: 'Failed to fetch available trainers' };
         }
     }
 

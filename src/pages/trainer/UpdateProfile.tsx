@@ -21,6 +21,7 @@ export default function ManageTrainerProfile() {
     name: '',
     email: '',
     phone: '',
+    nrc: '',
     dateOfBirth: '',
     gender: '',
     address: '',
@@ -39,6 +40,7 @@ export default function ManageTrainerProfile() {
             name: userProfile.name || '',
             email: user.email || '',
             phone: userProfile.phone || '',
+            nrc: userProfile.nrc || '',
             dateOfBirth: userProfile.dob || '',
             gender: userProfile.gender || '',
             address: userProfile.address || '',
@@ -187,6 +189,11 @@ export default function ManageTrainerProfile() {
             <div>
               <Label htmlFor="email">Email</Label>
               <Input id="email" type="email" value={profile.email} onChange={(e) => handleInputChange('email', e.target.value)} disabled={!isEditing} />
+            </div>
+
+            <div>
+              <Label htmlFor="nrc">NRC</Label>
+              <Input id="nrc" value={profile.nrc} onChange={(e) => handleInputChange('nrc', e.target.value)} disabled={!isEditing} />
             </div>
 
             {/* Phone + DOB */}

@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Settings } from "lucide-react";
 import { toast } from "sonner";
-import { useEquipments, Equipment } from "@/context/EquipmentContext"; // Import the context
+import { useEquipments, Equipment } from "@/context/EquipmentContext";
+import Cookies from "js-cookie";
 
 export default function ViewEquipments() {
     const { equipments } = useEquipments(); // Access equipments from the context
     const [loading, setLoading] = useState(true);
+    const [images, setImages] = useState<Record<string, string>>({});
 
     useEffect(() => {
         // Simulate loading delay (remove this in production)
@@ -16,6 +18,37 @@ export default function ViewEquipments() {
 
         return () => clearTimeout(timer); // Cleanup the timer
     }, []);
+
+    useEffect(() => {
+        const loadImages = async () => {
+            const token = Cookies.get("token");
+            const newImages: Record<string, string> = {};
+
+            for (const eq of equipments) {
+                if (eq.imageUrl) {
+                    try {
+                        const res = await fetch(eq.imageUrl, {
+                            headers: {
+                                Authorization: `Bearer ${token}`,
+                            },
+                        });
+                        if (res.ok) {
+                            const blob = await res.blob();
+                            newImages[eq.id] = URL.createObjectURL(blob);
+                        }
+                    } catch (err) {
+                        console.error("Failed to load image for", eq.name, err);
+                    }
+                }
+            }
+
+            setImages(newImages);
+        };
+
+        if (equipments.length > 0) {
+            loadImages();
+        }
+    }, [equipments]);
 
     return (
         <div className="container mx-auto px-4 py-8">
@@ -46,14 +79,19 @@ export default function ViewEquipments() {
                                 <p>Condition: {eq.equipmentCondition}</p>
                                 <p>Purchase: {eq.purchaseDate}</p>
                                 <p>Next Maintenance: {eq.nextMaintenanceDate}</p>
-                                {eq.imageUrl && (
+                                {images[eq.id] ? (
                                     <img
-                                        src={eq.imageUrl}
+                                        src={images[eq.id]}
                                         alt={eq.name}
                                         className="mt-2 w-full h-40 object-cover rounded"
                                     />
+                                ) : (
+                                    <div className="mt-2 w-full h-40 flex items-center justify-center bg-muted rounded">
+                                        <span>No Image</span>
+                                    </div>
                                 )}
                             </CardContent>
+
                         </Card>
                     ))}
                 </div>

@@ -15,7 +15,7 @@ interface StatCard {
 
 export default function TrainerDashboard() {
   const navigate = useNavigate();
-  const trainer =  authService.getCurrentUser();
+  const trainer = authService.getCurrentUser();
   const trainerId = trainer?.id; // Replace with actual logged-in trainer ID
 
   const [totalMembers, setTotalMembers] = useState<number>(0);
@@ -39,9 +39,9 @@ export default function TrainerDashboard() {
 
   const stats: StatCard[] = [
     { title: "Total Members", value: totalMembers, icon: Users, color: "bg-green-500" },
-   
+
     { title: "Average Rating", value: averageRating.toFixed(1), icon: Star, color: "bg-yellow-500" },
-    { title: "Assigned Packages", value: 15, icon: Package, color: "bg-purple-500" } // Replace with real data
+
   ];
 
   return (
@@ -54,7 +54,7 @@ export default function TrainerDashboard() {
 
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {stats.map((stat, i) => (
           <Card key={i} className="hover:shadow-xl transition-shadow bg-gray-800 text-white">
             <CardHeader className="flex justify-between pb-2">
@@ -70,7 +70,7 @@ export default function TrainerDashboard() {
         ))}
       </div>
 
-      
+
 
       {/* Quick Actions */}
       <Card>

@@ -27,10 +27,10 @@ export const authService = {
         Cookies.set('refreshToken', response.data.data?.refreshToken || "", { expires: 1 });
       }
 
-      return response;
+      return response.data;
     } catch (error) {
       console.error('Registration error:', error);
-      throw error.response?.data || { message: 'Registration failed' };
+      throw error?.response?.data || { message: 'Registration failed' };
     }
   },
 
@@ -39,14 +39,14 @@ export const authService = {
   //verify email with otp
   verifyEmail: async (email) => {
     try {
-      const message = await api.post(`${userUrl}/verifyEmail`, {
+      const response = await api.post(`${userUrl}/verifyEmail`, {
         email: email
       });
-      console.log('OTP send message:', message.data);
-      return true;
+      console.log('OTP send message:', response.data);
+      return response.data;
     } catch (error) {
       console.error('OTP send error:', error);
-      throw error.response?.data || { message: 'OTP send failed' };
+      throw error?.response?.data || { message: 'OTP send failed' };
     }
   },
 
