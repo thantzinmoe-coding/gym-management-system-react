@@ -27,6 +27,7 @@ interface TrainerContextType {
   removeTrainer: (id: string) => void;
   getAvailableTrainers: () => Promise<void>;
   getAllTrainers: () => Promise<void>;
+  getActiveTrainers: () => Promise<void>;
 }
 
 const TrainerContext = createContext<TrainerContextType | undefined>(undefined);
@@ -43,6 +44,11 @@ export const TrainerProvider = ({ children }: { children: ReactNode }) => {
 
   const getAvailableTrainers = async () => {
     const data = await trainerService.getAllAvailableTrainers();
+    setTrainers(data.data);
+  }
+
+  const getActiveTrainers = async () => {
+    const data = await trainerService.getAllActiveTrainers();
     setTrainers(data.data);
   }
 
@@ -65,7 +71,7 @@ export const TrainerProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <TrainerContext.Provider value={{ trainers, addTrainer, updateTrainer, removeTrainer, getAvailableTrainers, getAllTrainers }}>
+    <TrainerContext.Provider value={{ trainers, addTrainer, updateTrainer, removeTrainer, getAvailableTrainers, getAllTrainers, getActiveTrainers }}>
       {children}
     </TrainerContext.Provider>
   );

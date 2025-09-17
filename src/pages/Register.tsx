@@ -28,10 +28,6 @@ export default function Register() {
   const strength = checkPasswordStrength(password);
 
 
-  if (user) {
-    return <Navigate to={`/${user.role}/dashboard`} replace />;
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -80,9 +76,11 @@ export default function Register() {
         role: role
       });
 
-      const Id = response.data.data?.currentUser?.id;
+      const Id = response.data?.currentUser?.id;
 
       console.log(Id);
+
+      console.log(response.data);
 
       if (!Id) {
         throw new Error('User ID not found in response');

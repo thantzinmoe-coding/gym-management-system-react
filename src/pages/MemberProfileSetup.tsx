@@ -89,7 +89,7 @@ export default function MemberProfileSetup() {
           title: "Profile Created Successfully!",
           description: "Welcome to our gym! Your member profile has been set up.",
         });
-        navigate(`/login`, { replace: true });
+        navigate(`/login`);
       } else {
         toast({
           title: "Error",

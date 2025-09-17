@@ -70,7 +70,7 @@ export const EquipmentCard = ({ equipment, onEdit }: EquipmentCardProps) => { //
   };
 
   return (
-    <Card className="h-48 w-full max-w-sm">
+    <Card className="h-full w-full max-w-sm">
       <CardHeader className="pb-4">
         <div className="flex justify-between items-start">
           <CardTitle className="text-lg font-semibold truncate">

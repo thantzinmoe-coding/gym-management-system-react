@@ -71,7 +71,7 @@ export default function ViewNotifications() {
                       })}
                     </TableCell>
                     <TableCell>
-                      {n.read ? (
+                      {n.isRead ? (
                         <span className="text-green-600 font-medium">Read</span>
                       ) : (
                         <span className="text-red-600 font-medium">Unread</span>

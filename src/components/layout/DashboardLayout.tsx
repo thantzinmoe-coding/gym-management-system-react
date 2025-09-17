@@ -28,7 +28,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     notificationCount = getAdminNotificationCount(notifications);
   } else {
     const unreadNotifications = notifications.filter(
-      n => !n.read
+      n => !n.isRead
     );
     notificationCount = unreadNotifications.length;
   }

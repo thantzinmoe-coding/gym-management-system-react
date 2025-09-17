@@ -121,7 +121,9 @@ api.interceptors.response.use(
           localStorage.removeItem('user');
           
           // Redirect to auth page
-          window.location.href = '/';
+          setTimeout(() => {
+            window.location.href = '/login';
+          }, 3000);
           return Promise.reject(err);
         }
       }

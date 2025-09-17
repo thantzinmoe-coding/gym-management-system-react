@@ -9,7 +9,7 @@ export interface Notification {
   title: string;
   content: string;
   time: string; // matches backend DTO
-  read: boolean;
+  isRead: boolean;
 }
 
 
@@ -34,7 +34,7 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
       const markAsRead = await notificationService.markAllAsRead(user.id);
 
       setNotifications((prev) =>
-        prev.map((n) => ({ ...n, read: true }))
+        prev.map((n) => ({ ...n, isRead: true }))
       );
     } catch (err) {
       console.error("❌ Failed to mark notifications as read:", err);

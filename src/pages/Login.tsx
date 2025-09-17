@@ -46,14 +46,14 @@ export default function Login() {
       } else {
         toast({
           title: "Login failed",
-          description: "Please check your credentials and try again.",
+          description: `${response?.message || "Invalid credentials"}`,
           variant: "destructive",
         });
       }
     } catch (error) {
       toast({
         title: "Login failed",
-        description: "An error occurred during login.",
+        description: `${error?.message || error?.data?.message || "An error occurred during login"}`,
         variant: "destructive",
       });
     } finally {

@@ -1,6 +1,7 @@
 // src/services/attendanceService.ts
 import api from '@/services/api';
 import { format, parseISO, differenceInHours, parse } from 'date-fns';
+import { stat } from 'fs';
 
 
 export enum AttendanceType {
@@ -15,7 +16,7 @@ export interface AttendanceCreateData {
     
     timeIn?: string;
     hoursWorked?: number;
-    status?: 'present' | 'absent';
+    status?: 'ACTIVE' | 'INACTIVE';
 }
 
 export interface AttendanceRecord {
@@ -30,7 +31,7 @@ export interface AttendanceRecord {
     hoursWorked: number | null;
     packageDays: number | null;
     hoursWorkedFrontend?: number | null;
-    status : 'present' | 'absent' ;
+    status : 'ACTIVE' | 'INACTIVE';
 }
 // Define your data types (align with backend DTOs)
 export interface TrainerAttendanceRecord { // Make sure this is exported if used directly
@@ -153,6 +154,7 @@ const extractAttendances = (response: any) => {
                 attendanceType: attendance.attendanceType,
                 hoursWorked: hoursWorked,
                 packageDays: attendance.packageDays,
+                status : attendance.status,
             };
         });
     }
@@ -184,7 +186,7 @@ const extractUsers = (response: PaginatedResponse<SuperAdminDashBoardResponse>) 
 //Updated get All Users
 const getAllUsers = async (): Promise<User[]> => {
     try {
-        const response = await api.get<PaginatedResponse<SuperAdminDashBoardResponse>>(`${superAdminUrl}/all-users`);
+        const response = await api.get<PaginatedResponse<SuperAdminDashBoardResponse>>(`${superAdminUrl}/all-users?role=trainer&status=active`);
         return extractUsers(response.data);
     } catch (error: any) {
         console.error('Error fetching users:', error);

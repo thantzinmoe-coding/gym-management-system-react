@@ -167,12 +167,12 @@ const Reviews = () => {
                 Your success story could be next!
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button size="lg">
+                <Button size="lg" onClick={() => window.location.href = '/register'}>
                   Join Now
                 </Button>
-                <Button variant="outline" size="lg">
+                {/* <Button variant="outline" size="lg">
                   Schedule Tour
-                </Button>
+                </Button> */}
               </div>
             </Card>
           </>

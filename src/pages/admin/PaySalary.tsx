@@ -31,7 +31,7 @@ import Cookies from "js-cookie";
 
 export default function PaySalary() {
   const { toast } = useToast();
-  const { trainers, getAllTrainers } = useTrainers();
+  const { trainers, getAllTrainers, getActiveTrainers } = useTrainers();
   const [searchTerm, setSearchTerm] = useState("");
   const [isPayDialogOpen, setIsPayDialogOpen] = useState(false);
   const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false); // NEW state for history dialog
@@ -89,7 +89,7 @@ export default function PaySalary() {
 
   // Fetch trainers (no change)
   useEffect(() => {
-    getAllTrainers();
+    getActiveTrainers();
   }, []);
 
   // MODIFIED: Fetch all salary records (paid and pending) and store them.
