@@ -86,17 +86,34 @@ export default function ManageProfile() {
     setProfile(prev => ({ ...prev, [field]: value }));
   };
 
-  // ✅ Upload photo
+  // ✅ Upload photo with preview and size validation
+  const MAX_FILE_SIZE_MB = 2;
   const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+
+    // Validate file size
+    const fileSizeMB = file.size / (1024 * 1024);
+    if (fileSizeMB > MAX_FILE_SIZE_MB) {
+      toast({
+        title: "File Too Large",
+        description: `The selected image is ${fileSizeMB.toFixed(1)}MB. Maximum allowed size is ${MAX_FILE_SIZE_MB}MB.`,
+        variant: "destructive",
+      });
+      // Reset the input so the same file can be re-selected after resizing
+      event.target.value = '';
+      return;
+    }
+
+    // Instant local preview
+    const localPreviewUrl = URL.createObjectURL(file);
+    setProfilePhotoUrl(localPreviewUrl);
 
     try {
       const result = await userService.uploadProfilePicture(user.id, file);
 
       if (result.url) {
         setProfile(prev => ({ ...prev, profilePhoto: result.url }));
-        setProfilePhotoUrl(result.url);
       }
 
       toast({

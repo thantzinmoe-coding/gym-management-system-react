@@ -13,7 +13,9 @@ export default function VerifyOTP() {
   const location = useLocation();
   const [otp, setOtp] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
-  const { email, role, userId } = location.state || {};
+  const { email, role, password } = location.state || {};
+  const [isLoading, setIsLoading] = useState(false);
+  const [userId, setUserId] = useState('');
 
   console.log(userId);
 
@@ -28,16 +30,49 @@ export default function VerifyOTP() {
       });
 
       if (verified) {
-        toast({
-          title: 'Email Verified',
-          description: 'Your email has been successfully verified.',
-        });
 
-        // Navigate to MemberProfileSetup with userId, email, and role
-        navigate(`/setup/${role.toLowerCase()}-profile`, {
-          state: { userId, email, role }
-        });
+        try {
+          const response = await authService.register({
+            email: email,
+            password: password,
+            role: role
+          });
 
+          const Id = response.data?.currentUser?.id;
+
+          console.log(Id);
+
+          console.log(response.data);
+
+          if (!Id) {
+            throw new Error('User ID not found in response');
+          }
+
+          setUserId(Id);
+
+          console.log('Registration successful:', response.data);
+          toast({
+            title: 'Email Verified',
+            description: 'Your email has been successfully verified.',
+          });
+
+          // Navigate to MemberProfileSetup with userId, email, and role
+
+          setTimeout(() => {
+            navigate(`/setup/${role.toLowerCase()}-profile`, {
+              state: { userId: Id, email, role, password }
+            });
+          }, 1500);
+        } catch (error) {
+          toast({
+            title: "Registration failed",
+            description: error?.message || "Failed to register. Please try again.",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          console.error('Registration error:', error?.message);
+          return;
+        }
       }
     } catch (error) {
       console.error('OTP verification error:', error);
@@ -81,9 +116,9 @@ export default function VerifyOTP() {
           <div className="space-y-2">
             <label className="text-sm font-medium">Verification Code</label>
             <div className="flex justify-center">
-              <InputOTP 
-                maxLength={6} 
-                value={otp} 
+              <InputOTP
+                maxLength={6}
+                value={otp}
                 onChange={(value) => setOtp(value)}
               >
                 <InputOTPGroup>
@@ -98,9 +133,9 @@ export default function VerifyOTP() {
             </div>
           </div>
 
-          <Button 
+          <Button
             onClick={handleVerifyOTP}
-            className="w-full" 
+            className="w-full"
             disabled={isVerifying || otp.length !== 6}
           >
             {isVerifying ? "Verifying..." : "Verify OTP"}
@@ -110,9 +145,9 @@ export default function VerifyOTP() {
             <p className="text-sm text-muted-foreground mb-2">
               Didn't receive the code?
             </p>
-            <Button 
-              variant="ghost" 
-              size="sm" 
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={resendOTP}
               className="text-primary"
             >

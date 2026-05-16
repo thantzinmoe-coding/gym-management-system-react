@@ -41,7 +41,7 @@ export default function Login() {
             title: "Login successful",
             description: "Welcome to Gym Management System!",
           });
-          navigate(`/${authUser.role}/dashboard`, { replace: true });
+          window.location.href = `/${authUser.role}/dashboard`;
         }
       } else {
         toast({

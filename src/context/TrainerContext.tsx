@@ -1,4 +1,5 @@
 import { trainerService } from "@/services/trainerService";
+import { AvatarFallbackProps } from "@radix-ui/react-avatar";
 import { createContext, useContext, useState, ReactNode } from "react";
 
 export interface Trainer {
@@ -10,6 +11,7 @@ export interface Trainer {
   experience?: number;
   rating?: number;
   totalClients?: number;
+  avatarUrl?: string;
   status?: string;
   packages: Array<{
     id: string;

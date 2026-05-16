@@ -33,7 +33,7 @@ export interface ChatRoomResponse {
 }
 
 export interface TrainerResponseDto {
-  id: number; // Safe unless IDs exceed Number.MAX_SAFE_INTEGER
+  id: number;
   name: string;
   avatarUrl?: string | null;
   status?: 'ACTIVE' | 'INACTIVE';

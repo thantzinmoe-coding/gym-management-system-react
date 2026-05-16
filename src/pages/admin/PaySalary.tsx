@@ -50,42 +50,59 @@ export default function PaySalary() {
     Receptionist: 15,
   };
 
+  const [isEnd, setIsEnd] = useState(false);
+
+  const isEndOfMonth = (date = new Date()) => {
+    const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+
+    return date.getDate() === lastDay;
+  }
+
   useEffect(() => {
-    const fetchSalaryAvatars = async () => {
+    const today = new Date();
+    if (isEndOfMonth(today)) {
+      setIsEnd(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    const fetchTrainerAvatars = async () => {
       const token = Cookies.get('token');
-      if (!token || allSalaries.length === 0) return;
+      if (!token || trainers.length === 0) return;
 
       const newAvatars: Record<number, string> = {};
 
       await Promise.all(
-        allSalaries.map(async (salary) => {
-          if (salary.trainerAvatarUrl && !avatarUrls[salary.trainerId]) {
+        trainers.map(async (trainer) => {
+          if (trainer.avatarUrl && !avatarUrls[trainer.id]) {
             try {
-              const response = await fetch(salary.trainerAvatarUrl, {
+              const response = await fetch(trainer.avatarUrl, {
                 headers: {
                   Authorization: `Bearer ${token}`,
                 },
               });
               if (response.ok) {
                 const blob = await response.blob();
-                newAvatars[salary.trainerId] = URL.createObjectURL(blob);
+                newAvatars[trainer.id] = URL.createObjectURL(blob);
               } else {
                 console.error(
-                  `Failed to fetch avatar for trainer ${salary.trainerId}: ${response.statusText}`
+                  `Failed to fetch avatar for trainer ${trainer.id}: ${response.statusText}`
                 );
               }
             } catch (err) {
-              console.error(`Error fetching avatar for trainer ${salary.trainerId}:`, err);
+              console.error(`Error fetching avatar for trainer ${trainer.id}:`, err);
             }
           }
         })
       );
 
-      setAvatarUrls((prev) => ({ ...prev, ...newAvatars }));
+      if (Object.keys(newAvatars).length > 0) {
+        setAvatarUrls((prev) => ({ ...prev, ...newAvatars }));
+      }
     };
 
-    fetchSalaryAvatars();
-  }, [allSalaries]);
+    fetchTrainerAvatars();
+  }, [trainers]);
 
   // Fetch trainers (no change)
   useEffect(() => {
@@ -171,32 +188,26 @@ export default function PaySalary() {
 
   // NEW HELPER: Get salary details for a specific trainer for display
   const getTrainerSalaryInfo = (trainerId: string) => {
-    const now = new Date(); // Current date is September 10, 2025
-    const currentMonth = now.getMonth() + 1; // 9 for September
-    const currentYear = now.getFullYear(); // 2025
+    const now = new Date(); 
+    const currentMonth = now.getMonth() + 1; 
+    const currentYear = now.getFullYear(); 
 
-    console.log("All Salaries:", allSalaries);
-    console.log("Looking for Trainer ID:", trainerId, "for Month:", currentMonth, "Year:", currentYear);
-
-    // Find the salary record for the current month and year
+    // Find the salary record for the current month and year (Added .toString() for safety)
     const currentRecord = allSalaries.find(s =>
-      s.trainerId === trainerId &&
+      s.trainerId.toString() === trainerId.toString() &&
       s.salaryMonth === currentMonth &&
       s.salaryYear === currentYear
     );
 
-    console.log("Current Record for Trainer ID", trainerId, ":", currentRecord);
-
     // Find the most recent PAID salary record to determine the "Last Paid" date
     const paidSalaries = allSalaries
-      .filter(s => s.trainerId === trainerId && s.status === "PAID")
+      .filter(s => s.trainerId.toString() === trainerId.toString() && s.status === "PAID")
       .sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime());
 
-    console.log("Paid Salaries for Trainer ID", trainerId, ":", paidSalaries);
-
     return {
-      status: currentRecord?.status || "PENDING", // Default to PENDING if no record is found for this month yet
+      status: currentRecord?.status || "NO RECORD", // Changed from "PENDING" to "NO RECORD"
       lastPaid: paidSalaries.length > 0 ? paidSalaries[0].paymentDate : "N/A",
+      hasPendingSalary: currentRecord?.status === "PENDING" // New flag to control the button
     };
   };
 
@@ -213,6 +224,13 @@ export default function PaySalary() {
   const filteredTrainers = trainers.filter(trainer =>
     trainer.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  useEffect(() => {
+    const date = new Date();
+    console.log(date);
+    console.log(date.getDate());
+    console.log(date.getMonth() + 1)
+  }, [trainers])
 
   return (
     <div className="space-y-6">
@@ -263,7 +281,7 @@ export default function PaySalary() {
                     <div>
                       <p className="font-medium text-foreground">{trainer.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {trainerSalaryData?.trainerEmail || "No email"}
+                        {trainer.email || "No email"}
                       </p>
                     </div>
                   </div>
@@ -282,7 +300,11 @@ export default function PaySalary() {
 
                   {/* Status and Actions */}
                   <div className="flex items-center space-x-2">
-                    <Badge variant={salaryInfo.status === "PAID" ? "default" : "destructive"}>
+                    <Badge variant={
+                      salaryInfo.status === "PAID" ? "default" : 
+                      salaryInfo.status === "PENDING" ? "destructive" : 
+                      "secondary" // Gray badge for "NO RECORD"
+                    }>
                       {salaryInfo.status}
                     </Badge>
 
@@ -291,7 +313,8 @@ export default function PaySalary() {
                       History
                     </Button>
 
-                    {salaryInfo.status === "PENDING" && (
+                    {/* Disable Button if no pending salary record is found */}
+                    {salaryInfo.hasPendingSalary && isEnd? (
                       <Dialog open={isPayDialogOpen && selectedTrainer?.id === trainer.id} onOpenChange={setIsPayDialogOpen}>
                         <DialogTrigger asChild>
                           <Button size="sm" onClick={() => setSelectedTrainer(trainer)}>
@@ -312,6 +335,10 @@ export default function PaySalary() {
                           )}
                         </DialogContent>
                       </Dialog>
+                    ) : (
+                      <Button size="sm" disabled>
+                        Pay Now
+                      </Button>
                     )}
                   </div>
                 </div>

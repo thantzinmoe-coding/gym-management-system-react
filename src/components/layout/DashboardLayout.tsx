@@ -3,7 +3,7 @@ import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { AdminSidebar } from './AdminSidebar';
 import { TrainerSidebar } from './TrainerSidebar';
 import { MemberSidebar } from './MemberSidebar';
-import { Bell } from 'lucide-react';
+import { Bell, MessageCircle } from 'lucide-react';
 import { authService } from '@/services/authService';
 import { useNavigate } from 'react-router-dom';
 
@@ -18,7 +18,7 @@ function getAdminNotificationCount(notifications: any[]) {
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const user = authService.getCurrentUser();
-  const { notifications } = useNotifications();
+  const { notifications, unreadChatCount, resetChatCount } = useNotifications();
   const navigate = useNavigate();
 
   // Unread notifications for the current user's role
@@ -53,6 +53,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     if (user.role === 'member') navigate('/member/notifications');
   };
 
+  const handleChatClick = () => {
+    if (!user) return;
+    if (user.role === 'trainer') navigate('/trainer/chat');
+    if (user.role === 'member') navigate('/member/chat');
+  };
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background">
@@ -64,17 +70,33 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
             <div className="flex items-center space-x-4">
               {(user?.role === 'trainer' || user?.role === 'member') && (
-                <div className="relative">
-                  <Bell
-                    className="h-6 w-6 text-gray-700 cursor-pointer"
-                    onClick={handleNotificationClick}
-                  />
-                  {notificationCount > 0 && (
-                    <span className="absolute -top-1 -right-1 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-600 rounded-full">
-                      {notificationCount}
-                    </span>
-                  )}
-                </div>
+                <>
+                  {/* Chat icon with unread count */}
+                  <div className="relative">
+                    <MessageCircle
+                      className="h-6 w-6 text-gray-700 cursor-pointer"
+                      onClick={handleChatClick}
+                    />
+                    {unreadChatCount > 0 && (
+                      <span className="absolute -top-1 -right-1 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-blue-600 rounded-full">
+                        {unreadChatCount > 99 ? '99+' : unreadChatCount}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Notification bell */}
+                  <div className="relative">
+                    <Bell
+                      className="h-6 w-6 text-gray-700 cursor-pointer"
+                      onClick={handleNotificationClick}
+                    />
+                    {notificationCount > 0 && (
+                      <span className="absolute -top-1 -right-1 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-600 rounded-full">
+                        {notificationCount > 99 ? '99+' : notificationCount}
+                      </span>
+                    )}
+                  </div>
+                </>
               )}
 
               <span className="text-sm text-muted-foreground">Welcome, {user?.name}</span>
