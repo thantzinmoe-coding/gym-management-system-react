@@ -50,7 +50,7 @@ export function TrainerSidebar() {
 
   const handleLogout = () => {
     authService.logout();
-    navigate('/');
+    window.location.href = '/'; // Redirect to login page and force reset state
   };
 
   return (

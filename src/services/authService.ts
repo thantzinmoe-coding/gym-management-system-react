@@ -13,20 +13,6 @@ export const authService = {
         role: userData.role
       });
 
-      const currentUser = response.data.data?.currentUser;
-
-      if (currentUser) {
-        localStorage.setItem('user', JSON.stringify({
-          id: currentUser.id,
-          email: currentUser.email,
-          status: currentUser.status,
-          role: currentUser.roleName.toLowerCase(),
-          message: response.data.message
-        }));
-        Cookies.set('token', response.data.data?.token || "", { expires: 1 });
-        Cookies.set('refreshToken', response.data.data?.refreshToken || "", { expires: 1 });
-      }
-
       return response.data;
     } catch (error) {
       console.error('Registration error:', error);
@@ -100,8 +86,8 @@ export const authService = {
 
       return response.data;
     } catch (error) {
-      console.error('Login error:', error);
-      throw error.response?.data || { message: 'Login failed' };
+      console.error('Login error:', error?.response?.data);
+      throw error?.response?.data || { message: 'Login failed' };
     }
   },
 

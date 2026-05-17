@@ -50,7 +50,7 @@ export function AdminSidebar() {
 
   const handleLogout = () => {
     authService.logout();
-    navigate('/'); // Redirect to login page after logout
+    window.location.href = '/'; // Redirect to login page and force reset state
   };
 
   return (

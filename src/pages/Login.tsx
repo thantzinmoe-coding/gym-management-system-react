@@ -41,19 +41,19 @@ export default function Login() {
             title: "Login successful",
             description: "Welcome to Gym Management System!",
           });
-          navigate(`/${authUser.role}/dashboard`, { replace: true });
+          window.location.href = `/${authUser.role}/dashboard`;
         }
       } else {
         toast({
           title: "Login failed",
-          description: "Please check your credentials and try again.",
+          description: `${response?.message || "Invalid credentials"}`,
           variant: "destructive",
         });
       }
     } catch (error) {
       toast({
         title: "Login failed",
-        description: "An error occurred during login.",
+        description: `${error?.message || error?.data?.message || "An error occurred during login"}`,
         variant: "destructive",
       });
     } finally {

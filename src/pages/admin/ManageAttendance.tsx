@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { format, parseISO, differenceInHours, parse } from 'date-fns';
 import { AttendanceType } from '@/services/attendanceService';
 
-type AttendanceStatus = 'present' | 'absent';
+type AttendanceStatus = 'ACTIVE' | 'INACTIVE';
 
 export default function ManageAttendance() {
     const [searchTerm, setSearchTerm] = useState('');
@@ -33,7 +33,7 @@ export default function ManageAttendance() {
         attendanceType: AttendanceType.TRAINER,
         hoursWorked: null,
         timeOut: '',
-        status: 'present'
+        status: 'ACTIVE'
     });
 
     const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
@@ -66,6 +66,7 @@ export default function ManageAttendance() {
         try {
             const data = await attendanceService.getAllAttendance();
             setAttendanceRecords(data);
+            console.log("Attendance Data:", data);
         } catch (error: any) {
             toast.error(error.message || "Failed to fetch attendance data");
         }
@@ -84,11 +85,11 @@ export default function ManageAttendance() {
 
     const handleAddRecord = async () => {
         // For absent trainers, we only need userId, date, and attendanceType
-        const isValidAbsent = newRecord.status === 'absent' &&
+        const isValidAbsent = newRecord.status === 'INACTIVE' &&
             newRecord.userId && newRecord.date && newRecord.attendanceType === AttendanceType.TRAINER;
 
         // For present trainers, we need timeIn as well
-        const isValidPresent = newRecord.status === 'present' &&
+        const isValidPresent = newRecord.status === 'ACTIVE' &&
             newRecord.attendanceType === AttendanceType.TRAINER &&
             newRecord.userId && newRecord.date && newRecord.timeIn;
 
@@ -99,10 +100,11 @@ export default function ManageAttendance() {
                     date: newRecord.date,
                     attendanceType: newRecord.attendanceType,
                     // For absent records, use a default time or null
-                    timeIn: newRecord.status === 'absent' ? '00:00' : newRecord.timeIn,
+                    timeIn: newRecord.status === 'INACTIVE' ? '00:00' : newRecord.timeIn,
                     ...(newRecord.hoursWorked !== null && newRecord.hoursWorked !== undefined && {
                         hoursWorked: newRecord.hoursWorked
-                    })
+                    }),
+                    status: newRecord.status
                 };
 
                 const newRecordResponse = await attendanceService.addAttendance(recordToSend);
@@ -123,7 +125,7 @@ export default function ManageAttendance() {
                     attendanceType: AttendanceType.TRAINER,
                     hoursWorked: null,
                     timeOut: '',
-                    status: 'present'
+                    status: 'ACTIVE'
                 });
                 setIsAddDialogOpen(false);
                 toast.success(`Trainer ${newRecord.status} record added successfully`);
@@ -142,7 +144,7 @@ export default function ManageAttendance() {
         }
 
         // Don't allow editing absent records
-        if (record.status === 'absent') {
+        if (record.status === 'INACTIVE') {
             toast.error("Absent records cannot be edited");
             return;
         }
@@ -171,7 +173,7 @@ export default function ManageAttendance() {
             attendanceType: record.attendanceType,
             hoursWorked: hoursWorked,
             timeOut: record.timeOut || '',
-            status: record.status || 'present'
+            status: record.status || 'ACTIVE'
         });
         setIsAddDialogOpen(true);
     };
@@ -216,7 +218,7 @@ export default function ManageAttendance() {
                         attendanceType: AttendanceType.TRAINER,
                         hoursWorked: null,
                         timeOut: '',
-                        status: 'present'
+                        status: 'ACTIVE'
                     });
                     setIsAddDialogOpen(false);
                     toast.success("Attendance Time Out updated successfully");
@@ -240,7 +242,7 @@ export default function ManageAttendance() {
     };
 
     const getStatusBadge = (record: AttendanceRecord) => {
-        if (record.status === 'absent') {
+        if (record.status === 'INACTIVE') {
             return <Badge variant="destructive">Absent</Badge>;
         }
         return <Badge variant={record.timeOut == null ? 'secondary' : 'default'}>
@@ -310,14 +312,14 @@ export default function ManageAttendance() {
                                                 <SelectValue placeholder="Select attendance status" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="present">Present</SelectItem>
-                                                <SelectItem value="absent">Absent</SelectItem>
+                                                <SelectItem value="ACTIVE">Present</SelectItem>
+                                                <SelectItem value="INACTIVE">Absent</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
                                 )}
 
-                                {!editingRecord && newRecord.status === 'present' && (
+                                {!editingRecord && newRecord.status === 'ACTIVE' && (
                                     <div>
                                         <Label htmlFor="timeIn">Check In Time</Label>
                                         <Input
@@ -337,15 +339,6 @@ export default function ManageAttendance() {
                                                 id="timeOut"
                                                 type="time"
                                                 onChange={(e) => setNewRecord({ ...newRecord, timeOut: e.target.value })}
-                                            />
-                                        </div>
-                                        <div>
-                                            <Label htmlFor="hoursWorked">Hours Worked</Label>
-                                            <Input
-                                                id="hoursWorked"
-                                                type="number"
-                                                value={newRecord.hoursWorked || ''}
-                                                disabled
                                             />
                                         </div>
                                     </>
@@ -391,19 +384,19 @@ export default function ManageAttendance() {
                                     <div className="text-center">
                                         <p className="text-sm font-medium">Check In</p>
                                         <p className="text-sm text-muted-foreground">
-                                            {record.status === 'absent' ? '-' : formatTime(record.timeIn)}
+                                            {record.status === 'INACTIVE' ? '-' : formatTime(record.timeIn)}
                                         </p>
                                     </div>
                                     <div className="text-center">
                                         <p className="text-sm font-medium">Check Out</p>
                                         <p className="text-sm text-muted-foreground">
-                                            {record.status === 'absent' ? '-' : formatTime(record.timeOut)}
+                                            {record.status === 'INACTIVE' ? '-' : formatTime(record.timeOut)}
                                         </p>
                                     </div>
                                     <div className="text-center">
                                         <p className="text-sm font-medium">Hours Worked</p>
                                         <p className="text-sm text-muted-foreground">
-                                            {record.status === 'absent' ? '-' : (record.hoursWorked != null && typeof record.hoursWorked === 'number' ? record.hoursWorked.toFixed(2) : '-')}
+                                            {record.status === 'INACTIVE' ? '-' : (record.hoursWorked != null && typeof record.hoursWorked === 'number' ? record.hoursWorked.toFixed(2) : '-')}
                                         </p>
                                     </div>
                                     {getStatusBadge(record)}
@@ -411,7 +404,7 @@ export default function ManageAttendance() {
                                         variant="outline"
                                         size="sm"
                                         onClick={() => handleEdit(record)}
-                                        disabled={record.timeOut != null || record.status === 'absent'}
+                                        disabled={record.timeOut != null || record.status === 'INACTIVE'}
                                     >
                                         <Edit className="h-4 w-4" />
                                     </Button>

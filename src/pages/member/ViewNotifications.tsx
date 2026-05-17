@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useNotifications } from "@/context/NotificationContext";
@@ -6,10 +6,7 @@ import { useNotifications } from "@/context/NotificationContext";
 export default function ViewNotifications() {
   const { notifications, markAllAsRead } = useNotifications();
   const [expandedIds, setExpandedIds] = useState([]);
-
-  useEffect(() => {
-    markAllAsRead(); // mark all as read on page load
-  }, []);
+  const hasUnread = notifications.some(n => !n.isRead);
 
   const toggleExpand = (id) => {
     setExpandedIds(prev =>
@@ -28,7 +25,17 @@ export default function ViewNotifications() {
       <Card>
         <CardHeader>
           <CardTitle>All Notifications</CardTitle>
-          <CardDescription>Review notifications for your role</CardDescription>
+          <CardDescription className="flex items-center justify-between">
+            <span>Review notifications for your role</span>
+            {hasUnread && (
+              <button
+                onClick={() => markAllAsRead()}
+                className="text-sm text-blue-600 hover:text-blue-800 hover:underline font-medium"
+              >
+                Mark All as Read
+              </button>
+            )}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -71,7 +78,7 @@ export default function ViewNotifications() {
                       })}
                     </TableCell>
                     <TableCell>
-                      {n.read ? (
+                      {n.isRead ? (
                         <span className="text-green-600 font-medium">Read</span>
                       ) : (
                         <span className="text-red-600 font-medium">Unread</span>

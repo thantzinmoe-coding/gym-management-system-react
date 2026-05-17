@@ -2,7 +2,7 @@ import axios, { AxiosError, type AxiosRequestConfig, type AxiosResponse } from '
 import Cookies from 'js-cookie';
 
 // Base URL for your Spring Boot backend
-const API_BASE_URL = 'http://localhost:8080';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // Create axios instance
 const api = axios.create({
@@ -121,7 +121,9 @@ api.interceptors.response.use(
           localStorage.removeItem('user');
           
           // Redirect to auth page
-          window.location.href = '/';
+          setTimeout(() => {
+            window.location.href = '/login';
+          }, 3000);
           return Promise.reject(err);
         }
       }

@@ -26,13 +26,12 @@ export const userService = {
     //create user detail
     createUserDetail: async (data) => {
         try {
-            const response = await api.post(`/api/v1/auth/user-detail-info`, {
+            const response = await api.post(`/api/v1/auth/user-detail-info/${data.entityId}`, {
                 weight: data.weight || 0,
                 height: data.height || 0,
                 goal: data.goal || '',
                 experience: data.experience || '',
-                specialization: data.specialCondition || '',
-                entityId: data.entityId
+                specialization: data.specialization || ''
             });
             return response.data;
         } catch (error) {

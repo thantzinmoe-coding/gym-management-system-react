@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { User, Target } from 'lucide-react';
 import { userService } from '@/services/userService';
+import { authService } from '@/services/authService';
 
 export default function MemberProfileSetup() {
   const { toast } = useToast();
@@ -18,7 +19,10 @@ export default function MemberProfileSetup() {
   const { login } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { userId, email, role } = location.state || {};
+  const { userId, email, role, password } = location.state || {};
+
+  console.log("Received userId:", userId);
+  console.log("Received email:", email);
 
   // Redirect to login if userId or email is missing
   useEffect(() => {
@@ -83,13 +87,26 @@ export default function MemberProfileSetup() {
       // 6️⃣ Save profile locally
       localStorage.setItem("memberProfile", JSON.stringify(profile));
 
-      // 7️⃣ Navigate and show toast
+      // 7️⃣ Auto-login and navigate to dashboard
       if (success != null && response != null) {
-        toast({
-          title: "Profile Created Successfully!",
-          description: "Welcome to our gym! Your member profile has been set up.",
-        });
-        navigate(`/login`, { replace: true });
+        // Auto-login with the credentials from registration
+        const loginResponse = await authService.login(email, password);
+
+        if (loginResponse?.success) {
+          const authUser = authService.getCurrentUser();
+          toast({
+            title: "Profile Created Successfully!",
+            description: "Welcome to our gym! Your member profile has been set up.",
+          });
+          window.location.href = `/${authUser?.role || role?.toLowerCase() || 'member'}/dashboard`;
+        } else {
+          // Profile created but auto-login failed — fallback to login page
+          toast({
+            title: "Profile Created!",
+            description: "Please login with your credentials.",
+          });
+          navigate('/login');
+        }
       } else {
         toast({
           title: "Error",
@@ -250,14 +267,21 @@ export default function MemberProfileSetup() {
                 <Target className="h-4 w-4" />
                 Fitness Goals *
               </Label>
-              <Textarea
-                id="fitnessGoals"
-                value={profile.fitnessGoals}
-                onChange={(e) => handleInputChange('fitnessGoals', e.target.value)}
-                placeholder="Tell us about your fitness goals (e.g., weight loss, muscle gain, endurance, etc.)"
-                required
-                rows={4}
-              />
+              <Select required value={profile.fitnessGoals} onValueChange={(value) => handleInputChange('fitnessGoals', value)}>
+                <SelectTrigger id="fitnessGoals">
+                  <SelectValue placeholder="Select your fitness goal" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Weight Loss">Weight Loss</SelectItem>
+                  <SelectItem value="Muscle Gain">Muscle Gain</SelectItem>
+                  <SelectItem value="Endurance">Endurance Training</SelectItem>
+                  <SelectItem value="Flexibility">Flexibility & Mobility</SelectItem>
+                  <SelectItem value="General Fitness">General Fitness</SelectItem>
+                  <SelectItem value="Strength Training">Strength Training</SelectItem>
+                  <SelectItem value="Athletic Performance">Athletic Performance</SelectItem>
+                  <SelectItem value="Rehabilitation">Rehabilitation</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <Button

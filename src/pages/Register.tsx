@@ -28,10 +28,6 @@ export default function Register() {
   const strength = checkPasswordStrength(password);
 
 
-  if (user) {
-    return <Navigate to={`/${user.role}/dashboard`} replace />;
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -62,6 +58,13 @@ export default function Register() {
 
     try {
       await authService.verifyEmail(email);
+      navigate('/verify-otp', {
+        state: {
+          email,
+          role,
+          password
+        }
+      });
     } catch (error) {
       toast({
         title: "OTP sending failed",
@@ -73,42 +76,44 @@ export default function Register() {
       return;
     }
 
-    try {
-      const response = await authService.register({
-        email: email,
-        password: password,
-        role: role
-      });
+    // try {
+    //   const response = await authService.register({
+    //     email: email,
+    //     password: password,
+    //     role: role
+    //   });
 
-      const Id = response.data.data?.currentUser?.id;
+    //   const Id = response.data?.currentUser?.id;
 
-      console.log(Id);
+    //   console.log(Id);
 
-      if (!Id) {
-        throw new Error('User ID not found in response');
-      }
+    //   console.log(response.data);
 
-      setUserId(Id);
+    //   if (!Id) {
+    //     throw new Error('User ID not found in response');
+    //   }
 
-      console.log('Registration successful:', response.data);
+    //   setUserId(Id);
 
-      navigate('/verify-otp', {
-        state: {
-          email,
-          role,
-          userId: Id
-        }
-      });
-    } catch (error) {
-      toast({
-        title: "Registration failed",
-        description: error?.message || "Failed to register. Please try again.",
-        variant: "destructive",
-      });
-      setIsLoading(false);
-      console.error('Registration error:', error?.message);
-      return;
-    }
+    //   console.log('Registration successful:', response.data);
+
+    //   navigate('/verify-otp', {
+    //     state: {
+    //       email,
+    //       role,
+    //       userId: Id
+    //     }
+    //   });
+    // } catch (error) {
+    //   toast({
+    //     title: "Registration failed",
+    //     description: error?.message || "Failed to register. Please try again.",
+    //     variant: "destructive",
+    //   });
+    //   setIsLoading(false);
+    //   console.error('Registration error:', error?.message);
+    //   return;
+    // }
   };
 
   return (

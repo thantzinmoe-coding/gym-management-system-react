@@ -1,103 +1,106 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
+/* 
+  Modern Design System 
+  Energetic and vibrant palette suitable for a Gym Management System.
 */
 
 @layer base {
   :root {
-    /* Dashboard (main content) → White */
-    --background: 0 0% 98%;          /* white */
-    --foreground: 240 5.3% 26.1%;    /* dark gray text */
+    /* Dashboard (main content) → Soft Gray/White */
+    --background: 210 40% 98%;       /* very light cool gray */
+    --foreground: 222.2 84% 4.9%;    /* very dark blue/slate text */
 
     --card: 0 0% 100%;               /* pure white card */
-    --card-foreground: 240 5.3% 26.1%;
+    --card-foreground: 222.2 84% 4.9%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 240 5.3% 26.1%;
+    --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 240 5.3% 26.1%;       /* dark gray buttons */
-    --primary-foreground: 0 0% 98%;  /* white text on dark */
+    --primary: 221.2 83.2% 53.3%;    /* vibrant energetic blue */
+    --primary-foreground: 210 40% 98%;
 
-    --secondary: 0 0% 90%;           /* light gray */
-    --secondary-foreground: 240 5.3% 26.1%;
+    --secondary: 210 40% 96.1%;      /* light slate */
+    --secondary-foreground: 222.2 47.4% 11.2%;
 
-    --muted: 0 0% 95%;
-    --muted-foreground: 240 5.3% 46.1%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
 
-    --accent: 0 0% 90%;
-    --accent-foreground: 240 5.3% 26.1%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
 
-    --destructive: 0 84.2% 60.2%;    /* red for delete */
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 346.8 77.2% 49.8%;    /* vibrant red */
+    --destructive-foreground: 355.7 100% 97.3%;
 
-    --border: 0 0% 85%;
-    --input: 0 0% 90%;
-    --ring: 240 5.3% 26.1%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
 
     /* Yellow for stars */
-    --star: 48 100% 50%;
-    --star-muted: 0 0% 40%;
+    --star: 48 96% 53%;
+    --star-muted: 210 40% 80%;
 
-    --radius: 0.5rem;
+    --radius: 0.75rem; /* softer, more modern radius */
 
-    /* Sidebar → Dark Gray */
-    --sidebar-background: 0 0% 12%;   /* dark gray */
-    --sidebar-foreground: 0 0% 98%;   /* white text */
+    /* Sidebar → Rich Dark Blue/Slate */
+    --sidebar-background: 222.2 84% 4.9%;
+    --sidebar-foreground: 210 40% 98%;
 
-    --sidebar-primary: 0 0% 98%;
-    --sidebar-primary-foreground: 0 0% 8%;
+    --sidebar-primary: 221.2 83.2% 53.3%;
+    --sidebar-primary-foreground: 210 40% 98%;
 
-    --sidebar-accent: 0 0% 20%;
-    --sidebar-accent-foreground: 0 0% 95%;
+    --sidebar-accent: 217.2 32.6% 17.5%;
+    --sidebar-accent-foreground: 210 40% 98%;
 
-    --sidebar-border: 0 0% 25%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-border: 217.2 32.6% 17.5%;
+    --sidebar-ring: 221.2 83.2% 53.3%;
   }
 
   .dark {
-    /* Dashboard (main content) → Dark Gray */
-    --background: 0 0% 12%;          /* dark gray */
-    --foreground: 0 0% 98%;          /* white text */
+    /* Dashboard (main content) → Dark Slate */
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
 
-    --card: 0 0% 15%;
-    --card-foreground: 0 0% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
 
-    --popover: 0 0% 15%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
 
-    --primary: 0 0% 98%;             /* white button */
-    --primary-foreground: 0 0% 12%;  /* dark text on white */
+    --primary: 217.2 91.2% 59.8%;    /* slightly lighter blue for dark mode */
+    --primary-foreground: 222.2 47.4% 11.2%;
 
-    --secondary: 0 0% 20%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
 
-    --muted: 0 0% 25%;
-    --muted-foreground: 0 0% 70%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
 
-    --accent: 0 0% 20%;
-    --accent-foreground: 0 0% 98%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
 
-    --destructive: 0 62.8% 40%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 342.8 74.5% 58%;
+    --destructive-foreground: 210 40% 98%;
 
-    --border: 0 0% 25%;
-    --input: 0 0% 20%;
-    --ring: 0 0% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
 
-    /* Sidebar → Even Darker Gray */
-    --sidebar-background: 0 0% 8%;   /* darker gray */
-    --sidebar-foreground: 0 0% 95%;
+    /* Sidebar → Even Darker */
+    --sidebar-background: 224 71.4% 4.1%;
+    --sidebar-foreground: 210 40% 98%;
 
-    --sidebar-primary: 0 0% 98%;
-    --sidebar-primary-foreground: 0 0% 8%;
+    --sidebar-primary: 217.2 91.2% 59.8%;
+    --sidebar-primary-foreground: 222.2 47.4% 11.2%;
 
-    --sidebar-accent: 0 0% 20%;
-    --sidebar-accent-foreground: 0 0% 95%;
+    --sidebar-accent: 217.2 32.6% 17.5%;
+    --sidebar-accent-foreground: 210 40% 98%;
 
-    --sidebar-border: 0 0% 20%;
+    --sidebar-border: 217.2 32.6% 17.5%;
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 }
@@ -109,5 +112,27 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+    font-family: 'Inter', sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Outfit', sans-serif;
+    letter-spacing: -0.02em;
+  }
+}
+
+@layer utilities {
+  .glass {
+    @apply bg-white/70 backdrop-blur-lg border border-white/20 shadow-xl;
+  }
+  .dark .glass {
+    @apply bg-black/50 backdrop-blur-lg border border-white/10;
+  }
+  
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600;
+  }
+  .dark .text-gradient {
+    @apply bg-gradient-to-r from-blue-400 to-indigo-400;
   }
 }
