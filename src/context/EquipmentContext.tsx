@@ -37,7 +37,6 @@ export const EquipmentProvider = ({ children }: { children: ReactNode }) => {
     const fetchEquipments = async () => {
       try {
         const equipmentsData = await equipmentService.getAllEquipments();
-        console.log("Fetched Equipments:", equipmentsData);
         setEquipments(equipmentsData);
       } catch (error) {
         console.error("Error fetching equipments:", error);

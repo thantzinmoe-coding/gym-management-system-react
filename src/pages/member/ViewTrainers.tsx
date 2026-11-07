@@ -1,23 +1,16 @@
 // src/pages/ViewTrainers.tsx (Updated content)
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "lucide-react";
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Search, Star, Mail, Phone } from 'lucide-react';
+import { Search, Star, MessageCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 // Import TrainerResponseDto and the new method
 import { trainerService, TrainerResponseDto } from '@/services/trainerService';
@@ -39,6 +32,7 @@ interface AverageRatingResponse {
 
 
 export default function ViewTrainers() {
+  const navigate = useNavigate();
   const [trainers, setTrainers] = useState<DisplayTrainer[]>([]); // Use the new interface
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
@@ -239,21 +233,15 @@ export default function ViewTrainers() {
               </div>
             </CardHeader>
             <CardContent className="pt-2">
-              <Dialog>
-                <DialogTrigger asChild>
-
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Book Session with {trainer.name}</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <p className="text-sm text-muted-foreground">
-                      This feature is coming soon!
-                    </p>
-                  </div>
-                </DialogContent>
-              </Dialog>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate(`/member/chat?userId=${trainer.id}`)}
+                className="w-full sm:w-auto"
+              >
+                <MessageCircle className="h-4 w-4 mr-2" />
+                Chat with {trainer.name}
+              </Button>
             </CardContent>
           </Card>
         ))}
@@ -267,4 +255,3 @@ export default function ViewTrainers() {
     </div>
   );
 }
-

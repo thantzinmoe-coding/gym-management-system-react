@@ -38,7 +38,7 @@ export default function SendNotifications() {
       });
 
       setNotification({ title: "", message: "" });
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: "Failed to Send",
         description: error.message || "Something went wrong",

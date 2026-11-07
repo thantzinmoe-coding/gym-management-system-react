@@ -66,7 +66,7 @@ export const trainerService = {
                 console.warn(`No average rating found for trainer ${trainerId} or unexpected response structure.`);
                 return { averageRating: 0.0 }; // Return 0.0 if no rating is available
             }
-        } catch (error: any) {
+        } catch (error) {
             console.error(`Error fetching average rating for trainer ${trainerId}:`, error);
             // If an error occurs (e.g., trainer not found, or no feedback yet), default to 0.0
             return { averageRating: 0.0 };
@@ -75,9 +75,9 @@ export const trainerService = {
 
     getTotalMemberCount: async (trainerId: number) => {
         try {
-            const response = await api.get<{ count: number }>(`/api/v1/book-package/trainer/${trainerId}/user-count`);
+            const response = await api.get<number>(`/api/v1/book-package/trainer/${trainerId}/user-count`); // backend returns a plain number
             return response.data;
-        } catch (error: any) {
+        } catch (error) {
             console.error(`Error fetching total members for trainer ${trainerId}:`, error);
             throw new Error(error.response?.data?.message || 'Failed to fetch total member count');
         }

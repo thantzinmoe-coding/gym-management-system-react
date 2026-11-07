@@ -7,6 +7,7 @@ import {
   File,
   Package,
   DollarSign,
+  TrendingDown,
   LogOut,
   Home // ✅ Added for dashboard
 } from "lucide-react";
@@ -36,6 +37,7 @@ const adminMenuItems = [
   { title: "Applications", url: "/admin/notifications", icon: File },
   { title: "Send Notifications", url: "/admin/send-notification", icon: Bell },
   { title: "Pay Salary", url: "/admin/salary", icon: DollarSign },
+  { title: "Churn Risk", url: "/admin/churn-risk", icon: TrendingDown },
 ];
 
 export function AdminSidebar() {

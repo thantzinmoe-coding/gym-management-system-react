@@ -157,7 +157,7 @@ const Index = () => {
                 </p>
                 <Link to="/AboutUs">
                   <Button size="lg" className="text-lg px-8 py-6 bg-black text-white hover:bg-gray-800 rounded-xl shadow-lg transition-all duration-300">
-                    Learn More
+                    Read More
                   </Button>
                 </Link>
               </div>

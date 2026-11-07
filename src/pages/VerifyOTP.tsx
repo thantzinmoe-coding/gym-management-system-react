@@ -17,7 +17,6 @@ export default function VerifyOTP() {
   const [isLoading, setIsLoading] = useState(false);
   const [userId, setUserId] = useState('');
 
-  console.log(userId);
 
   const handleVerifyOTP = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,9 +39,7 @@ export default function VerifyOTP() {
 
           const Id = response.data?.currentUser?.id;
 
-          console.log(Id);
 
-          console.log(response.data);
 
           if (!Id) {
             throw new Error('User ID not found in response');
@@ -50,7 +47,6 @@ export default function VerifyOTP() {
 
           setUserId(Id);
 
-          console.log('Registration successful:', response.data);
           toast({
             title: 'Email Verified',
             description: 'Your email has been successfully verified.',

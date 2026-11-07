@@ -44,7 +44,6 @@ export const PackageProvider = ({ children }: { children: ReactNode }) => {
   const getAllGymPackages = async () => {
     try {
       const response = await gymPackageService.getAllGymPackages();
-      console.log(response.data);
       setPackages(response.data);
     } catch (err) {
       console.error('Failed to fetch gym packages', err);

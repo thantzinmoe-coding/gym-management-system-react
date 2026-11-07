@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, User, Activity, Star, CreditCard, Phone, Calendar, Users } from "lucide-react";
+import { Search, User, Activity, Star, CreditCard, Phone, Calendar, Users, MessageCircle } from "lucide-react";
 import { manageUserService, BackendUser } from "@/services/manageUserService";
 import { authService } from "@/services/authService";
 import Cookies from "js-cookie";
@@ -38,6 +40,7 @@ const getBMIStatus = (bmi: number) => {
 };
 
 export default function ViewMembers() {
+  const navigate = useNavigate();
   const [members, setMembers] = useState<MemberHealth[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
@@ -52,7 +55,6 @@ export default function ViewMembers() {
         const response = await manageUserService.getBookedUsersByTrainer(trainerId || 0, 0, 20);
         const data: BackendUser[] = response.data;
 
-        console.log("Fetched members:", data);
 
         // Map backend data to MemberHealth type
         const mappedMembers: MemberHealth[] = data.map((user) => ({
@@ -70,7 +72,6 @@ export default function ViewMembers() {
           lastVisit: "",
         }));
 
-        console.log("Mapped members:", mappedMembers);
 
         setMembers(mappedMembers);
       } catch (error) {
@@ -137,7 +138,6 @@ export default function ViewMembers() {
         />
       </div>
 
-      {/* Members List */}
       {/* Members List */}
       {loading ? (
         <p className="text-muted-foreground">Loading members...</p>
@@ -219,6 +219,17 @@ export default function ViewMembers() {
                     <Badge variant="outline">
                       {member.goal || "No specific goal"}
                     </Badge>
+                  </div>
+
+                  <div className="pt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigate(`/trainer/chat?userId=${member.id}`)}
+                    >
+                      <MessageCircle className="h-4 w-4 mr-2" />
+                      Message {member.name}
+                    </Button>
                   </div>
                 </CardContent>
               </Card>

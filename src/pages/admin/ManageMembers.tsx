@@ -102,9 +102,7 @@ export default function ManageUser() {
 
   // State management
   const [loading, setLoading] = useState(false);
-  const [allMembers, setAllMembers] = useState<UserRow[]>([]); // Store all members fetched from getAllUsers (filtered by role='MEMBER')
-  const [bookedMemberIds, setBookedMemberIds] = useState<Set<number>>(new Set()); // Store IDs of *members* who have booked
-  const [usersToDisplay, setUsersToDisplay] = useState<UserRow[]>([]); // Filtered list for the table rendering
+  const [allMembers, setAllMembers] = useState<UserRow[]>([]); // Every member (all pages), merged with booking info
   const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
 
   // Filters for the table display
@@ -112,39 +110,41 @@ export default function ManageUser() {
   const [statusFilter, setStatusFilter] = useState<string>('ALL'); // Filter by the *displayed* user status (Active/Inactive based on booking)
   const [memberStatusFilter, setMemberStatusFilter] = useState<string>('ALL'); // Filter by the member's actual booking status
 
-  // Pagination for the table display (based on allMembers)
+  // Pagination for the table display (applied to the filtered list)
   const [currentPage, setCurrentPage] = useState(1); // UI uses 1-based indexing
-  const [pageSize] = useState(20);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalItems, setTotalItems] = useState(0); // Total members fetched from getAllUsers
+  const pageSize = 20;
+
+  // Members and bookings are loaded in full (in batches) so that search, the status filters
+  // and the summary cards cover every member, not only the 20 rows of the current page.
+  const FETCH_BATCH = 500;
+  const fetchAllPages = async (fetchPage: (page: number) => Promise<{ data?: BackendUser[]; meta?: { totalPages?: number } }>): Promise<BackendUser[]> => {
+    const rows: BackendUser[] = [];
+    for (let page = 0; ; page++) {
+      const res = await fetchPage(page);
+      const data: BackendUser[] = res?.data ?? [];
+      rows.push(...data);
+      const apiTotalPages = res?.meta?.totalPages ?? 1;
+      if (data.length < FETCH_BATCH || page + 1 >= apiTotalPages) break;
+    }
+    return rows;
+  };
 
   // Function to load all necessary data
-  const loadData = async (resetPage = false) => {
+  const loadData = async () => {
     setLoading(true);
     try {
-      const pageForApi = resetPage ? 1 : currentPage;
+      const [members, bookedUsers] = await Promise.all([
+        fetchAllPages((page) => manageUserService.getAllUsers(page, FETCH_BATCH, undefined, 'MEMBER', undefined)),
+        fetchAllPages((page) => manageUserService.getBookedUsers(page, FETCH_BATCH)),
+      ]);
 
-      // 1. Fetch all members (filtered by role: 'MEMBER')
-      const allMembersResponse = await manageUserService.getAllUsers(
-        pageForApi - 1, // 0-based for API
-        pageSize,
-        keyword.trim() || undefined,
-        'MEMBER', // Explicitly filter for MEMBER role
-        // Note: We apply the user.status filter client-side now, so we pass undefined here.
-        undefined
-      );
-
-      // 2. Fetch booked users to identify those who have booked packages.
-      // Ensure to filter by role: 'MEMBER' to only consider members who booked.
-      const bookedUsersResponse = await manageUserService.getBookedUsers(0, 20); // Fetch a reasonable batch of booked users
-      // Process and map all book
       // Build a map of booked user data for quick lookup
       const bookedMap = new Map<number, BackendUser>();
-      bookedUsersResponse.data.forEach((b: BackendUser) => {
+      bookedUsers.forEach((b: BackendUser) => {
         bookedMap.set(b.id, b);
       });
 
-      const mappedAllMembers: UserRow[] = allMembersResponse.data.map((user: BackendUser) => {
+      const mappedAllMembers: UserRow[] = members.map((user: BackendUser) => {
         const bookedInfo = bookedMap.get(user.id); // Get booking info if exists
         const isBooked = !!bookedInfo;
 
@@ -169,24 +169,8 @@ export default function ManageUser() {
         };
       });
 
-
-      // Create a set of IDs for members who have booked for quick lookup by filter
-      const memberBookedIds = new Set<number>(mappedAllMembers
-        .filter(member => member.isBooked)
-        .map(member => member.id)
-      );
-      setBookedMemberIds(memberBookedIds); // Store for use in stats calculation and potential future filtering
-
-      setAllMembers(mappedAllMembers); // Store the complete list of members fetched
-      setTotalPages(allMembersResponse.meta?.totalPages || 1);
-      setTotalItems(allMembersResponse.meta?.totalItems || 0); // Total count of members fetched from getAllUsers
-
-      // Apply client-side filters for the usersToDisplay state
-      applyClientSideFilters(mappedAllMembers, keyword, statusFilter, memberStatusFilter);
-
-      if (resetPage) setCurrentPage(1);
-
-    } catch (error: any) {
+      setAllMembers(mappedAllMembers);
+    } catch (error) {
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -197,19 +181,17 @@ export default function ManageUser() {
     }
   };
 
+  useEffect(() => {
+    loadData();
+  }, []);
 
-  // Function to apply client-side filters to the 'allMembers' list
-  const applyClientSideFilters = (
-    members: UserRow[],
-    currentKeyword: string,
-    currentUserStatus: string, // This filter now applies to the DERIVED status
-    currentMemberStatus: string
-  ) => {
-    let filtered = [...members]; // Start with all members
+  // Search and filters apply to every member
+  const filteredMembers = useMemo(() => {
+    let filtered = allMembers;
 
     // Filter by keyword (name, email, phone)
-    if (currentKeyword.trim()) {
-      const lowerKeyword = currentKeyword.trim().toLowerCase();
+    const lowerKeyword = keyword.trim().toLowerCase();
+    if (lowerKeyword) {
       filtered = filtered.filter(user =>
         user.name.toLowerCase().includes(lowerKeyword) ||
         user.email.toLowerCase().includes(lowerKeyword) ||
@@ -218,47 +200,36 @@ export default function ManageUser() {
     }
 
     // Filter by the DERIVED user status (Active/Inactive based on booking)
-    if (currentUserStatus !== 'ALL') {
-      filtered = filtered.filter(user => user.status === currentUserStatus.toLowerCase());
+    if (statusFilter !== 'ALL') {
+      filtered = filtered.filter(user => user.status === statusFilter.toLowerCase());
     }
 
-    // Filter by the member's actual booking status (PENDING, ACTIVE, INACTIVE)
-    if (currentMemberStatus !== 'ALL') {
-      filtered = filtered.filter(user => user.memberStatus === currentMemberStatus);
+    // Filter by the member's actual booking status (PENDING, ACTIVE)
+    if (memberStatusFilter !== 'ALL') {
+      filtered = filtered.filter(user => user.memberStatus === memberStatusFilter);
     }
+    return filtered;
+  }, [allMembers, keyword, statusFilter, memberStatusFilter]);
 
-    setUsersToDisplay(filtered); // Update the state for the table rendering
-  };
-
-  // Effect to load initial data and re-load when pagination changes
+  // A new search or filter starts from the first page of results
   useEffect(() => {
-    loadData();
-  }, [currentPage]); // Dependency on currentPage for pagination
+    setCurrentPage(1);
+  }, [keyword, statusFilter, memberStatusFilter]);
 
-  // Effect to re-apply client-side filters when filter states or the allMembers list changes
-  useEffect(() => {
-    // Only re-apply filters if data is not currently being loaded from the API
-    // and we have members data to filter.
-    if (!loading && allMembers.length > 0) {
-      applyClientSideFilters(allMembers, keyword, statusFilter, memberStatusFilter);
-    } else if (!loading && allMembers.length === 0 && !keyword && statusFilter === 'ALL' && memberStatusFilter === 'ALL') {
-      // If no members and no filters applied, ensure usersToDisplay is empty
-      setUsersToDisplay([]);
-    }
-  }, [keyword, statusFilter, memberStatusFilter, allMembers, loading]); // Dependencies for re-filtering
+  const totalItems = filteredMembers.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const usersToDisplay = useMemo(
+    () => filteredMembers.slice((currentPage - 1) * pageSize, currentPage * pageSize),
+    [filteredMembers, currentPage]
+  );
 
-
-  // Calculate stats based on 'allMembers' and their 'isBooked' status
-  const totalMemberCount = useMemo(() => allMembers.length, [allMembers]);
-
-  // Active Members: members who have booked a package AND whose derived status is 'active'
-  const activeMemberCount = useMemo(() => {
-    return allMembers.filter(m => m.isBooked && m.status === 'active').length;
-  }, [allMembers]);
-
-  const inactiveMemberCount = useMemo(() => {
-    return totalMemberCount - activeMemberCount;
-  }, [totalMemberCount, activeMemberCount]);
+  // Stats cover all members
+  const totalMemberCount = allMembers.length;
+  const activeMemberCount = useMemo(
+    () => allMembers.filter(m => m.isBooked && m.status === 'active').length,
+    [allMembers]
+  );
+  const inactiveMemberCount = totalMemberCount - activeMemberCount;
 
 
   // Handler for deleting a user
@@ -269,8 +240,8 @@ export default function ManageUser() {
         title: 'Success',
         description: `Member ${userName} has been deleted successfully`,
       });
-      loadData(true); // Reload data after deletion to reflect changes
-    } catch (error: any) {
+      loadData(); // Reload data after deletion to reflect changes
+    } catch (error) {
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -279,19 +250,17 @@ export default function ManageUser() {
     }
   };
 
-  // Apply filters by reloading data and resetting to page 1
+  // Filtering is live as you type; Enter just jumps back to the first page
   const applyFilters = () => {
-    setCurrentPage(1); // Reset to first page
-    loadData(true);    // Load data with reset page flag
+    setCurrentPage(1);
   };
 
-  // Reset all filters and reload data
+  // Reset all filters
   const resetFilters = () => {
     setKeyword('');
     setStatusFilter('ALL');
     setMemberStatusFilter('ALL');
     setCurrentPage(1);
-    loadData(true); // Reload data with reset page flag
   };
 
   // Status badge component for the DERIVED user status

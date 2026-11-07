@@ -22,13 +22,31 @@ export const authService = {
 
 
 
+  // Password reset (signed out): email a code, then set a new password with it.
+  requestPasswordReset: async (email: string) => {
+    try {
+      const response = await api.post('api/v1/forgotPassword', { email });
+      return response.data;
+    } catch (error) {
+      throw error?.response?.data || { message: 'Could not send the reset code' };
+    }
+  },
+
+  resetPassword: async (email: string, code: string, newPassword: string) => {
+    try {
+      const response = await api.post('api/v1/forgotPassword/reset', { email, code: Number(code), newPassword });
+      return response.data;
+    } catch (error) {
+      throw error?.response?.data || { message: 'Password reset failed' };
+    }
+  },
+
   //verify email with otp
   verifyEmail: async (email) => {
     try {
       const response = await api.post(`${userUrl}/verifyEmail`, {
         email: email
       });
-      console.log('OTP send message:', response.data);
       return response.data;
     } catch (error) {
       console.error('OTP send error:', error);
@@ -43,7 +61,6 @@ export const authService = {
         email: data.email,
         code: data.otp
       });
-      console.log("Response data: " + response.data.message);
       return true;
     } catch (error) {
       console.error('Account verification error:', error);
@@ -73,7 +90,7 @@ export const authService = {
       });
 
       if (response) {
-        localStorage.setItem('token', response.data.data?.token || "");
+        // The token lives only in the cookie; a second copy in localStorage was one more place to steal it from.
         localStorage.setItem('user', JSON.stringify({
           id: response.data.data?.userId,
           email: response.data.data?.email,
@@ -93,7 +110,7 @@ export const authService = {
 
   // Logout user
   logout: () => {
-    localStorage.removeItem('token');
+    localStorage.removeItem('token'); // clean up copies stored by older versions
     localStorage.removeItem('user');
     Cookies.remove('token');
     Cookies.remove('refreshToken');
@@ -107,6 +124,6 @@ export const authService = {
 
   // Check if user is authenticated
   isAuthenticated: () => {
-    return !!localStorage.getItem('token');
+    return !!Cookies.get('token');
   }
 };

@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { authService } from '@/services/authService';
 import { bookPackageService } from "@/services/bookPackageService";
+import { RecommendedPackages } from '@/components/analytics/RecommendedPackages';
 
 // Define the type for the booking details based on your backend DTO
 interface BookPackageDetailResponseDto {
@@ -114,7 +115,7 @@ export default function BookPackages() {
         title: "Package Booked",
         description: `You have successfully booked the ${newBooking?.gymPackageName || "selected"} package.`,
       });
-    } catch (err: any) {
+    } catch (err) {
       toast({
         title: "Booking Failed",
         description: err.message || "Unable to book package. You may already have an active booking.",
@@ -137,7 +138,7 @@ export default function BookPackages() {
         title: "Package Cancelled",
         description: "You have successfully cancelled your package.",
       });
-    } catch (err: any) {
+    } catch (err) {
       toast({
         title: "Cancellation Failed",
         description: err.message || "Unable to cancel package. Please try again.",
@@ -155,6 +156,8 @@ export default function BookPackages() {
         <h1 className="text-3xl font-bold text-foreground">Book Packages</h1>
         <p className="text-muted-foreground">Choose the perfect fitness package for your goals</p>
       </div>
+
+      <RecommendedPackages onBook={handleBookPackage} disabled={!!currentBooking} />
 
       {/* Active Booking Status Banner */}
       {currentBooking && (
@@ -226,7 +229,7 @@ function PackageCard({
   // ✨ MODIFICATION: Add memberStatus to the props
   memberStatus
 }: {
-  pkg: Package & { bookingId?: number; isDisabled?: boolean };
+  pkg: Package & { bookingId?: number; isDisabled?: boolean; isBooked?: boolean; isPopular?: boolean };
   trainers: Trainer[];
   onBook: (id: number) => void;
   onCancel: (bookingId: number, packageId: number) => void;

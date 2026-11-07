@@ -9,7 +9,7 @@ export const assignedGymPackageService = {
     try {
       const response = await api.post(`${assignedGymPackageUrl}`, assignedData);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error assigning schedule:', error);
       throw error.response?.data || { message: 'Failed to assign schedule' };
     }
@@ -20,7 +20,7 @@ export const assignedGymPackageService = {
     try {
       const response = await api.delete(`${assignedGymPackageUrl}/${id}/${packageId}`);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       console.error(`Error unassigning schedule with id ${id}:`, error);
       throw error.response?.data || { message: 'Failed to unassign schedule' };
     }
@@ -30,8 +30,8 @@ export const assignedGymPackageService = {
     try {
       const response = await api.patch(`${assignedGymPackageUrl}/${trainerId}/${packageId}`);
       return response.data;
-    } catch (error: any) {
-      console.error(`Error updating assigned schedule with id ${id}:`, error);
+    } catch (error) {
+      console.error(`Error updating assigned schedule for trainer ${trainerId}, package ${packageId}:`, error);
       throw error.response?.data || { message: 'Failed to update assigned schedule' };
     }
   },
@@ -42,7 +42,7 @@ export const assignedGymPackageService = {
     try {
       const response = await api.get(`${assignedGymPackageUrl}/assign-package-by-trainer/${trainerId}?page=${page}&size=${size}`);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching assigned packages:', error);
       throw error.response?.data || { message: 'Failed to fetch assigned packages' };
     }

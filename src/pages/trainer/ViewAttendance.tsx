@@ -136,7 +136,7 @@ export default function ViewAttendance() {
 
         setAttendance(formattedRecords);
 
-      } catch (err: any) {
+      } catch (err) {
         console.error("Error fetching trainer attendance:", err);
         setError(err.message || "Could not fetch attendance records.");
         toast.error(err.message || "Failed to load attendance.");

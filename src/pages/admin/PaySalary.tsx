@@ -25,9 +25,24 @@ import {
   History, // NEW: Using History icon for the button
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useTrainers } from "@/context/TrainerContext";
+import { useTrainers, type Trainer } from "@/context/TrainerContext";
 import { salaryService } from "@/services/salaryService";
 import Cookies from "js-cookie";
+
+// A salary record as returned by the backend.
+interface SalaryRecord {
+  id: number;
+  trainerId: number | string;
+  amount: number;
+  status: string;
+  salaryMonth?: number;
+  salaryYear?: number;
+  paymentDate?: string;
+  notes?: string;
+}
+
+// Trainers listed on this page; `role` picks the hourly rate.
+type SalaryTrainer = Trainer & { role?: string };
 
 export default function PaySalary() {
   const { toast } = useToast();
@@ -35,12 +50,12 @@ export default function PaySalary() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isPayDialogOpen, setIsPayDialogOpen] = useState(false);
   const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false); // NEW state for history dialog
-  const [selectedTrainer, setSelectedTrainer] = useState<any>(null);
+  const [selectedTrainer, setSelectedTrainer] = useState<SalaryTrainer | null>(null);
   const [totalHours, setTotalHours] = useState<Record<string, number>>({});
   // NEW: Store all salary records from the API in a single array
-  const [allSalaries, setAllSalaries] = useState<any[]>([]);
+  const [allSalaries, setAllSalaries] = useState<SalaryRecord[]>([]);
   // NEW: State to hold the history for the selected trainer
-  const [trainerPaymentHistory, setTrainerPaymentHistory] = useState<any[]>([]);
+  const [trainerPaymentHistory, setTrainerPaymentHistory] = useState<SalaryRecord[]>([]);
 
   const [avatarUrls, setAvatarUrls] = useState<Record<number, string>>({});
 
@@ -136,7 +151,7 @@ export default function PaySalary() {
     });
   }, [trainers]);
 
-  const calculateSalary = (trainer: any) => {
+  const calculateSalary = (trainer: SalaryTrainer) => {
     const hoursWorked = totalHours[trainer.id] || 0;
     const rate = hourlyRates[trainer.role] || hourlyRates["Trainer"];
     return hoursWorked * rate;
@@ -180,7 +195,7 @@ export default function PaySalary() {
 
       setIsPayDialogOpen(false);
       setSelectedTrainer(null);
-    } catch (err: any) {
+    } catch (err) {
       console.error(`Error paying salary for ${selectedTrainer.name}:`, err);
       toast({ title: "Error", description: err.message || "Failed to pay salary", variant: "destructive" });
     }
@@ -212,7 +227,7 @@ export default function PaySalary() {
   };
 
   // NEW HELPER: Open the history dialog for a trainer
-  const openHistoryDialog = (trainer: any) => {
+  const openHistoryDialog = (trainer: SalaryTrainer) => {
     const history = allSalaries
       .filter(s => s.trainerId.toString() === trainer.id.toString() && s.status === "PAID")
       .sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime());
@@ -227,9 +242,6 @@ export default function PaySalary() {
 
   useEffect(() => {
     const date = new Date();
-    console.log(date);
-    console.log(date.getDate());
-    console.log(date.getMonth() + 1)
   }, [trainers])
 
   return (

@@ -38,13 +38,14 @@ export default function ManageAttendance() {
 
     const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
     const [users, setUsers] = useState<User[]>([]);
+    // Which records this page manages: trainer shifts or member check-ins.
+    const [recordType, setRecordType] = useState<AttendanceType>(AttendanceType.TRAINER);
+    const isTrainer = recordType === AttendanceType.TRAINER;
+    const personLabel = isTrainer ? 'Trainer' : 'Member';
 
-    // Only trainer attendance
-    const trainerAttendance = attendanceRecords.filter(record => record.attendanceType === AttendanceType.TRAINER);
-
-    const filteredTrainerData = trainerAttendance.filter(item =>
-        item.userName.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredTrainerData = attendanceRecords
+        .filter(record => record.attendanceType === recordType)
+        .filter(item => item.userName.toLowerCase().includes(searchTerm.toLowerCase()));
 
     const formatTime = (timeString: string | null) => {
         if (!timeString) return '-';
@@ -60,48 +61,43 @@ export default function ManageAttendance() {
     useEffect(() => {
         fetchAttendanceData();
         fetchUsers();
-    }, []);
+        setNewRecord(prev => ({ ...prev, userId: 0, attendanceType: recordType }));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [recordType]);
 
     const fetchAttendanceData = async () => {
         try {
-            const data = await attendanceService.getAllAttendance();
+            const data = await attendanceService.getAllAttendance(recordType);
             setAttendanceRecords(data);
-            console.log("Attendance Data:", data);
-        } catch (error: any) {
+        } catch (error) {
             toast.error(error.message || "Failed to fetch attendance data");
         }
     };
 
     const fetchUsers = async () => {
         try {
-            const usersData = await attendanceService.getAllUsers();
-            console.log("Users Data:", usersData);
+            const usersData = await attendanceService.getAllUsers(isTrainer ? 'trainer' : 'member');
             setUsers(usersData);
-        } catch (error: any) {
+        } catch (error) {
             console.error("Error fetching users:", error);
             toast.error(error.message || "Failed to fetch users");
         }
     };
 
     const handleAddRecord = async () => {
-        // For absent trainers, we only need userId, date, and attendanceType
-        const isValidAbsent = newRecord.status === 'INACTIVE' &&
-            newRecord.userId && newRecord.date && newRecord.attendanceType === AttendanceType.TRAINER;
-
-        // For present trainers, we need timeIn as well
-        const isValidPresent = newRecord.status === 'ACTIVE' &&
-            newRecord.attendanceType === AttendanceType.TRAINER &&
-            newRecord.userId && newRecord.date && newRecord.timeIn;
+        // Absent: person and date. Present: also the check-in time.
+        const isValidAbsent = newRecord.status === 'INACTIVE' && newRecord.userId && newRecord.date;
+        const isValidPresent = newRecord.status === 'ACTIVE' && newRecord.userId && newRecord.date && newRecord.timeIn;
 
         if (isValidAbsent || isValidPresent) {
             try {
                 const recordToSend: AttendanceCreateData = {
                     userId: newRecord.userId,
                     date: newRecord.date,
-                    attendanceType: newRecord.attendanceType,
+                    attendanceType: recordType,
                     // For absent records, use a default time or null
                     timeIn: newRecord.status === 'INACTIVE' ? '00:00' : newRecord.timeIn,
-                    ...(newRecord.hoursWorked !== null && newRecord.hoursWorked !== undefined && {
+                    ...(isTrainer && newRecord.hoursWorked !== null && newRecord.hoursWorked !== undefined && {
                         hoursWorked: newRecord.hoursWorked
                     }),
                     status: newRecord.status
@@ -122,14 +118,14 @@ export default function ManageAttendance() {
                     userId: 0,
                     date: '',
                     timeIn: '',
-                    attendanceType: AttendanceType.TRAINER,
+                    attendanceType: recordType,
                     hoursWorked: null,
                     timeOut: '',
                     status: 'ACTIVE'
                 });
                 setIsAddDialogOpen(false);
-                toast.success(`Trainer ${newRecord.status} record added successfully`);
-            } catch (error: any) {
+                toast.success(`${personLabel} ${newRecord.status === 'ACTIVE' ? 'check-in' : 'absence'} recorded`);
+            } catch (error) {
                 toast.error(error.message || "Failed to add attendance record");
             }
         } else {
@@ -138,11 +134,6 @@ export default function ManageAttendance() {
     };
 
     const handleEdit = (record: AttendanceRecord) => {
-        if (record.attendanceType !== 'TRAINER') {
-            toast.error("Only trainer attendance records can be edited");
-            return;
-        }
-
         // Don't allow editing absent records
         if (record.status === 'INACTIVE') {
             toast.error("Absent records cannot be edited");
@@ -186,18 +177,17 @@ export default function ManageAttendance() {
                     const date = editingRecord.date;
                     const checkOutTime = newRecord.timeOut;
 
-                    console.log("Check Out Time:", checkOutTime);
 
                     const parsedTimeIn = parse(checkInTime, 'HH:mm', parseISO(date));
                     const parsedTimeOut = parse(checkOutTime, 'HH:mm', parseISO(date));
 
                     const hoursWorkedCalc = differenceInHours(parsedTimeOut, parsedTimeIn);
 
-                    console.log("Calculated hoursWorkedCalc:", hoursWorkedCalc);
 
+                    // Hours worked only matter for trainers (salary); members just check out.
                     const updateData = {
                         timeOut: checkOutTime,
-                        hoursWorked: hoursWorkedCalc,
+                        hoursWorked: isTrainer ? hoursWorkedCalc : null,
                     };
 
                     const updatedRecordResponse = await attendanceService.updateAttendance(editingRecord.id, updateData);
@@ -215,17 +205,17 @@ export default function ManageAttendance() {
                         userId: 0,
                         date: '',
                         timeIn: '',
-                        attendanceType: AttendanceType.TRAINER,
+                        attendanceType: recordType,
                         hoursWorked: null,
                         timeOut: '',
                         status: 'ACTIVE'
                     });
                     setIsAddDialogOpen(false);
-                    toast.success("Attendance Time Out updated successfully");
+                    toast.success("Check-out time saved");
                 } else {
                     toast.error("Attendance Time Out already recorded")
                 }
-            } catch (error: any) {
+            } catch (error) {
                 toast.error(error.message || "Failed to update attendance record");
             }
         }
@@ -236,7 +226,7 @@ export default function ManageAttendance() {
             await attendanceService.deleteAttendance(id);
             setAttendanceRecords(attendanceRecords.filter(record => record.id !== id));
             toast.success("Attendance record deleted successfully");
-        } catch (error: any) {
+        } catch (error) {
             toast.error(error.message || "Failed to delete attendance record");
         }
     };
@@ -254,10 +244,19 @@ export default function ManageAttendance() {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold text-foreground">Manage Trainer Attendance</h1>
-                    <p className="text-muted-foreground">Track and manage trainer attendance</p>
+                    <h1 className="text-3xl font-bold text-foreground">Manage Attendance</h1>
+                    <p className="text-muted-foreground">Record trainer shifts and member check-ins</p>
                 </div>
                 <div className="flex gap-2">
+                    {/* Trainers / Members switch */}
+                    <div className="inline-flex rounded-md border p-1">
+                        {[AttendanceType.TRAINER, AttendanceType.MEMBER].map(type => (
+                            <Button key={type} size="sm" variant={recordType === type ? 'default' : 'ghost'}
+                                onClick={() => setRecordType(type)}>
+                                {type === AttendanceType.TRAINER ? 'Trainers' : 'Members'}
+                            </Button>
+                        ))}
+                    </div>
                     <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                         <DialogTrigger asChild>
                             <Button onClick={() => setEditingRecord(null)}>
@@ -267,21 +266,21 @@ export default function ManageAttendance() {
                         </DialogTrigger>
                         <DialogContent>
                             <DialogHeader>
-                                <DialogTitle>{editingRecord ? 'Edit' : 'Add'} Trainer Attendance Record</DialogTitle>
+                                <DialogTitle>{editingRecord ? 'Check out' : 'Add'} {personLabel} Attendance</DialogTitle>
                             </DialogHeader>
                             <div className="space-y-4">
                                 <div>
-                                    <Label htmlFor="userId">Trainer</Label>
+                                    <Label htmlFor="userId">{personLabel}</Label>
                                     <Select
                                         value={newRecord.userId.toString()}
                                         onValueChange={(value) => setNewRecord({ ...newRecord, userId: parseInt(value) })}
                                         disabled={!!editingRecord}
                                     >
                                         <SelectTrigger className="w-full">
-                                            <SelectValue placeholder="Select a trainer" />
+                                            <SelectValue placeholder={`Select a ${personLabel.toLowerCase()}`} />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {users.filter(user => user.role === 'TRAINER').map((user) => (
+                                            {users.filter(user => user.role === recordType).map((user) => (
                                                 <SelectItem key={user.userId} value={user.userId.toString()}>
                                                     {user.userName} ({user.userEmail})
                                                 </SelectItem>
@@ -355,12 +354,12 @@ export default function ManageAttendance() {
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Trainer Attendance</CardTitle>
-                    <CardDescription>Daily trainer check-in, check-out and absent records</CardDescription>
+                    <CardTitle>{personLabel} Attendance</CardTitle>
+                    <CardDescription>Last 30 days, newest first: check-in, check-out and absences</CardDescription>
                     <div className="flex items-center space-x-2">
                         <Search className="h-4 w-4 text-muted-foreground" />
                         <Input
-                            placeholder="Search trainers..."
+                            placeholder={`Search ${personLabel.toLowerCase()}s...`}
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="max-w-sm"
@@ -394,9 +393,9 @@ export default function ManageAttendance() {
                                         </p>
                                     </div>
                                     <div className="text-center">
-                                        <p className="text-sm font-medium">Hours Worked</p>
+                                        <p className="text-sm font-medium">{isTrainer ? 'Hours Worked' : 'Visit #'}</p>
                                         <p className="text-sm text-muted-foreground">
-                                            {record.status === 'INACTIVE' ? '-' : (record.hoursWorked != null && typeof record.hoursWorked === 'number' ? record.hoursWorked.toFixed(2) : '-')}
+                                            {record.status === 'INACTIVE' ? '-' : isTrainer ? (record.hoursWorked != null && typeof record.hoursWorked === 'number' ? record.hoursWorked.toFixed(2) : '-') : (record.packageDays ?? '-')}
                                         </p>
                                     </div>
                                     {getStatusBadge(record)}

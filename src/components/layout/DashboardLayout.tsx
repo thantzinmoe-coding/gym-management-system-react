@@ -12,7 +12,7 @@ interface DashboardLayoutProps {
 }
 
 // Function to get admin notification count
-function getAdminNotificationCount(notifications: any[]) {
+function getAdminNotificationCount(notifications: unknown[]) {
   return 0;
 }
 

@@ -1,73 +1,64 @@
-# Welcome to your Lovable project
+# Gym Management System — Frontend
 
-## Project info
+React single-page app for the gym management system. It talks to the Spring Boot backend in `../gym-management-system-java`.
 
-**URL**: https://lovable.dev/projects/f7759d80-ca9e-4d96-a182-5a4dd228435c
+## Tech stack
 
-## How can I edit this code?
+- Vite 5, TypeScript, React 18
+- Tailwind CSS and shadcn/ui (Radix UI)
+- React Router, TanStack Query, React Hook Form + Zod
+- Axios for REST, SockJS + STOMP for real-time chat/notifications
+- Chart.js / Recharts for dashboards
 
-There are several ways of editing your application.
+## Prerequisites
 
-**Use Lovable**
+- Node.js 18+ and npm
+- The backend running (see its README)
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/f7759d80-ca9e-4d96-a182-5a4dd228435c) and start prompting.
+## Configuration
 
-Changes made via Lovable will be committed automatically to this repo.
+Create a `.env` file in this folder (one already exists as a template with empty values):
 
-**Use your preferred IDE**
+```
+VITE_API_BASE_URL=http://localhost:8080/api/v1
+VITE_WS_BASE_URL=http://localhost:8080/ws
+```
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+- `VITE_API_BASE_URL` is the base URL of the REST API (used by `src/services/api.ts`; `ChatService.ts` appends `/api/chat` to it, so confirm the value matches your backend routes).
+- `VITE_WS_BASE_URL` is the backend's SockJS endpoint, `/ws` (used by `src/services/socket.ts`).
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## Run
 
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+```bash
+npm install
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+The dev server listens on `http://localhost:3001`.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Scripts
 
-**Use GitHub Codespaces**
+| Command | Description |
+| --- | --- |
+| `npm run dev` | Start the Vite dev server (port 3001) |
+| `npm run build` | Production build into `dist/` |
+| `npm run build:dev` | Build in development mode |
+| `npm run preview` | Preview the production build |
+| `npm run lint` | Run ESLint |
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Project structure
 
-## What technologies are used for this project?
+```
+src/
+├── components/   # UI components (shadcn/ui and app components)
+├── context/      # React context providers
+├── hooks/        # custom hooks
+├── lib/          # shared helpers
+├── pages/        # route-level pages
+├── services/     # API, WebSocket and domain service modules
+└── utils/        # utilities
+```
 
-This project is built with:
+## Deployment
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/f7759d80-ca9e-4d96-a182-5a4dd228435c) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+`vercel.json` is included for deploying to Vercel. Set `VITE_API_BASE_URL` and `VITE_WS_BASE_URL` in the project's environment variables.

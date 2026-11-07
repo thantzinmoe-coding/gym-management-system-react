@@ -1,3 +1,4 @@
+import type React from 'react';
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -49,7 +50,7 @@ export default function GiveFeedback() {
         </div>
     );
 
-    const handleSubmitFeedback = async (e: any) => {
+    const handleSubmitFeedback = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedTrainer || !rating || !feedback.trim()) {
             toast({
@@ -62,12 +63,6 @@ export default function GiveFeedback() {
 
         try {
 
-            console.log('Submitting feedback with data:', {
-                comment: feedback,
-                ratingPoints: rating,
-                member_id: userId,
-                trainer_id: selectedTrainer,
-            });
 
             const response = await feedbackService.giveFeedback({
                 comment: feedback,
@@ -76,7 +71,6 @@ export default function GiveFeedback() {
                 trainer_id: selectedTrainer,
             });
 
-            console.log('Feedback submission response:', response);
             toast({
                 title: "Feedback Submitted",
                 description: "Thank you for your feedback! It helps us improve our services.",
@@ -97,7 +91,7 @@ export default function GiveFeedback() {
             setRating(0);
             setFeedback('');
 
-        } catch (error: any) {
+        } catch (error) {
             console.error('Error submitting feedback:', error);
             toast({
                 title: "Error",
@@ -154,7 +148,6 @@ export default function GiveFeedback() {
                         <div>
                             <label className="text-sm font-medium mb-2 block">Trainer</label>
                             <Select value={selectedTrainer} onValueChange={(value) => {
-                                console.log("Selected Trainer ID:", value);
                                 setSelectedTrainer(value);
                             }}>
                                 <SelectTrigger>

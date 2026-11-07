@@ -151,7 +151,9 @@ export default function ManageTrainers() {
     }
   };
 
-  const handleDeleteTrainer = async (userId: number, userName: string) => {
+  const handleDeleteTrainer = async (userId: number, userName?: string) => {
+    // Deleting a trainer cannot be undone: ask first.
+    if (!window.confirm(`Delete trainer${userName ? ` ${userName}` : ''}? This cannot be undone.`)) return;
     try {
       await manageUserService.deleteUser(userId);
       toast({
@@ -160,7 +162,7 @@ export default function ManageTrainers() {
       });
       // Reload data after deletion to reflect changes
       fetchTrainers();
-    } catch (error: any) {
+    } catch (error) {
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -250,7 +252,7 @@ export default function ManageTrainers() {
                   <Button
                     variant="destructive"
                     size="sm"
-                    onClick={() => handleDeleteTrainer(trainer.id)}
+                    onClick={() => handleDeleteTrainer(trainer.id, trainer.name)}
                   >
                     🗑️
                   </Button>

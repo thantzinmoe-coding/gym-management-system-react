@@ -38,7 +38,6 @@ export const EquipmentCard = ({ equipment, onEdit }: EquipmentCardProps) => { //
       if (equipment.imageUrl) {
         try {
           const token = Cookies.get("token");
-          console.log(token)
           const response = await fetch(equipment.imageUrl, {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -65,7 +64,6 @@ export const EquipmentCard = ({ equipment, onEdit }: EquipmentCardProps) => { //
   };
 
   const handleEdit = (equipment: Equipment) => {
-    console.log("Edit equipment:", equipment.id);
     onEdit(equipment); // Called the onEdit function
   };
 

@@ -26,7 +26,7 @@ export const scheduleService = {
         try {
             const response = await api.post(`${scheduleUrl}/bulk`, bulkRequestData);
             return response.data;
-        } catch (error: any) {
+        } catch (error) {
             console.error('Error creating bulk schedules:', error);
             throw error.response?.data || { message: 'Failed to create schedules' };
         }
@@ -40,7 +40,7 @@ export const scheduleService = {
         try {
             const response = await api.get(`${scheduleUrl}/${id}`);
             return response.data;
-        } catch (error: any) {
+        } catch (error) {
             console.error(`Error fetching schedule with id ${id}:`, error);
             throw error.response?.data || { message: 'Failed to fetch schedule' };
         }
@@ -53,7 +53,7 @@ export const scheduleService = {
         try {
             const response = await api.get(`${scheduleUrl}?page=${page}&size=${size}`);
             return response.data;
-        } catch (error: any) {
+        } catch (error) {
             console.error('Error fetching all schedules:', error);
             throw error.response?.data || { message: 'Failed to fetch schedules' };
         }
@@ -68,7 +68,7 @@ export const scheduleService = {
         try {
             const response = await api.put(`${scheduleUrl}/${id}`, scheduleData);
             return response.data;
-        } catch (error: any) {
+        } catch (error) {
             console.error(`Error updating schedule with id ${id}:`, error);
             throw error.response?.data || { message: 'Failed to update schedule' };
         }
@@ -82,7 +82,7 @@ export const scheduleService = {
         try {
             const response = await api.delete(`${scheduleUrl}/${id}`);
             return response.data;
-        } catch (error: any) {
+        } catch (error) {
             console.error(`Error deleting schedule with id ${id}:`, error);
             throw error.response?.data || { message: 'Failed to delete schedule' };
         }

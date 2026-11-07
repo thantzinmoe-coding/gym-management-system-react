@@ -32,16 +32,6 @@ export const superAdminService = {
         }
     },
 
-    // Accept booking
-    acceptBooking: async (bookingId: number) => {
-        try {
-            const response = await api.post(`${superAdminUrl}/${bookingId}`);
-            return response.data;
-        } catch (error) {
-            console.error('Accept booking error:', error);
-            throw error.response?.data || { message: 'Failed to accept booking' };
-        }
-    },
 
     // Get all bookings (paginated, with filters)
     getAllBookings: async (params: {
@@ -61,23 +51,6 @@ export const superAdminService = {
         }
     },
 
-    //Get all pending bookings
-    getAllPendingBookings: async (params: {
-        keyword?: string;
-        memberId?: number;
-        packageId?: number;
-        memberStatus?: string;
-        page?: number;
-        size?: number;
-    }) => {
-        try {
-            const response = await api.get(`${superAdminUrl}/get-all-pending-bookings`, { params });
-            return response.data;
-        } catch (error) {
-            console.error('Get all pending bookings error:', error);
-            throw error.response?.data || { message: 'Failed to fetch pending bookings' };
-        }
-    },
 
     // Accept trainer
     acceptTrainer: async (trainerId: number, trainerStatus: string) => {

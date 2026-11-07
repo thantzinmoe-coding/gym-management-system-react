@@ -85,9 +85,10 @@ export const EquipmentForm = ({ equipment, onCancel }: EquipmentFormProps) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const data = {
+    const data: EquipmentFormData = {
       ...formData,
-      // imageFile is already inside formData
+      // imageFile is already inside formData; the select only offers valid conditions
+      equipmentCondition: formData.equipmentCondition as EquipmentFormData["equipmentCondition"],
     };
 
     if (equipment) {

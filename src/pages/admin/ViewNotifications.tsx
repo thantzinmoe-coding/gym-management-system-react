@@ -23,7 +23,6 @@ export default function ViewNotifications() {
   const fetchTrainerApplications = async () => {
     try {
       const res = await trainerService.getTrainerApplications();
-      console.log("Trainer Applications API:", res);
 
       // handle both formats: {data: []} or []
       if (Array.isArray(res)) {
@@ -47,8 +46,13 @@ export default function ViewNotifications() {
 
   const fetchMemberApplications = async () => {
     try {
-      const res = await superAdminService.getAllBookings({});
-      console.log("Member Applications API:", res);
+      // Newest first. Pending requests (the ones to act on) come first, followed by the
+      // most recently approved bookings so an approved application does not just vanish.
+      const [pending, approved] = await Promise.all([
+        superAdminService.getAllBookings({ memberStatus: 'PENDING', size: 100 }),
+        superAdminService.getAllBookings({ memberStatus: 'ACTIVE', size: 20 }),
+      ]);
+      const res = { data: [...(pending?.data ?? []), ...(approved?.data ?? [])] };
 
       if (res && Array.isArray(res.data)) {
         const mapped = res.data.map((app) => ({
@@ -135,7 +139,6 @@ export default function ViewNotifications() {
   const approveMember = async (id) => {
     try {
       const res = await superAdminService.approveMemberBooking(id);
-      console.log("Approve Member Response:", res);
       toast({ title: "Booking Approved", description: `${res?.data?.AcceptedBookingResponse?.memberId} booking approved.` });
       fetchMemberApplications();
     } catch (error) {
@@ -147,7 +150,6 @@ export default function ViewNotifications() {
   const rejectMember = async (id, email, packageName, name) => {
     try {
       const res = await superAdminService.rejectMemberBooking(id, email, packageName, name);
-      console.log("Reject Member Response:", res);
       toast({ title: "Booking Rejected", description: "Member booking rejected." });
       fetchMemberApplications();
     } catch (error) {

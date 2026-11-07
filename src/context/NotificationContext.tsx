@@ -49,6 +49,8 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
 
   // Cache for resolved sender names: { senderId: name }
   const senderNameCacheRef = useRef<Record<number, string>>({});
+  // Track processed message IDs to deduplicate messages received across multiple WS channels
+  const seenMessageIdsRef = useRef<Set<number>>(new Set());
 
   const addNotification = (n: Notification) => {
     setNotifications((prev) => [n, ...prev]);
@@ -56,7 +58,7 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
 
   const markAllAsRead = async () => {
     try {
-      const markAsRead = await notificationService.markAllAsRead(user.id);
+      await notificationService.markAllAsRead(user.id);
 
       setNotifications((prev) =>
         prev.map((n) => ({ ...n, isRead: true }))
@@ -114,7 +116,6 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
   useEffect(() => {
     if (!user?.id) {
       if (client.active) {
-        console.log("🔌 Deactivating WebSocket (User logged out)");
         client.deactivate();
       }
       return;
@@ -124,7 +125,6 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
 
     const fetchNotifications = async () => {
       try {
-        console.log("📥 Fetching notifications for user:", user.id);
         const data = await notificationService.getForUser(user.id);
         if (isMounted) setNotifications(data);
       } catch (err) {
@@ -134,53 +134,69 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
 
     fetchNotifications();
 
+    const handleIncomingChatMessage = (message: { body: string }) => {
+      try {
+        const chatMsg: ChatMessage = JSON.parse(message.body);
+        if (chatMsg.id !== undefined && chatMsg.id !== null) {
+          if (seenMessageIdsRef.current.has(chatMsg.id)) {
+            return;
+          }
+          seenMessageIdsRef.current.add(chatMsg.id);
+          if (seenMessageIdsRef.current.size > 500) {
+            const firstId = seenMessageIdsRef.current.values().next().value;
+            if (firstId !== undefined) {
+              seenMessageIdsRef.current.delete(firstId);
+            }
+          }
+        }
+
+        window.dispatchEvent(new CustomEvent('chatMessageUpdate', { detail: chatMsg }));
+
+        // Only show notification for messages from others
+        if (Number(chatMsg.senderId) !== Number(user.id)) {
+          // Increment global unread chat count
+          setUnreadChatCount(prev => {
+            const newCount = prev + 1;
+            localStorage.setItem(`totalUnreadChatCount_${user.id}`, newCount.toString());
+            return newCount;
+          });
+
+          // Resolve sender name then show toast
+          resolveSenderName(chatMsg.senderId, chatMsg.senderName).then(senderName => {
+            const messagePreview = chatMsg.content.length > 60
+              ? chatMsg.content.substring(0, 60) + '...'
+              : chatMsg.content;
+
+            toast({
+              title: `💬 Message from ${senderName}`,
+              description: messagePreview,
+            });
+          });
+
+          playMessageSound();
+        }
+      } catch (e) {
+        console.error("Failed to parse incoming chat message", e);
+      }
+    };
+
     const setupAndActivate = () => {
       client.onConnect = () => {
-        console.log("✅ Connected to WebSocket");
 
         // Subscribe to system notifications (broadcast)
         client.subscribe("/topic/notifications", (message) => {
           const notif: Notification = JSON.parse(message.body);
-          console.log("🔔 New notification received:", notif);
           addNotification(notif);
         });
 
-        // Subscribe to private chat messages (user-specific)
-        client.subscribe('/user/queue/messages', (message) => {
-          const chatMsg: ChatMessage = JSON.parse(message.body);
-          console.log("💬 New chat message received (global):", chatMsg);
-          window.dispatchEvent(new CustomEvent('chatMessageUpdate', { detail: chatMsg }));
-
-          // Only show notification for messages from others
-          if (chatMsg.senderId !== user.id) {
-            // Increment global unread chat count
-            setUnreadChatCount(prev => {
-              const newCount = prev + 1;
-              localStorage.setItem(`totalUnreadChatCount_${user.id}`, newCount.toString());
-              return newCount;
-            });
-
-            // Resolve sender name then show toast
-            resolveSenderName(chatMsg.senderId, chatMsg.senderName).then(senderName => {
-              const messagePreview = chatMsg.content.length > 60
-                ? chatMsg.content.substring(0, 60) + '...'
-                : chatMsg.content;
-
-              toast({
-                title: `💬 Message from ${senderName}`,
-                description: messagePreview,
-              });
-            });
-
-            playMessageSound();
-          }
-        });
+        // Subscribe to private chat messages (both user queue and direct user topic)
+        client.subscribe('/user/queue/messages', handleIncomingChatMessage);
+        client.subscribe(`/topic/chat/${user.id}`, handleIncomingChatMessage);
 
         // Subscribe to real-time online status updates
         client.subscribe('/topic/online-status', (message) => {
           try {
               const statusMap = JSON.parse(message.body);
-              console.log("🟢 Real-time online status received globally:", statusMap);
               window.dispatchEvent(new CustomEvent('onlineStatusUpdate', { detail: statusMap }));
           } catch (e) {
               console.error("Failed to parse online status message", e);
@@ -216,7 +232,7 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
     return () => {
       isMounted = false;
     };
-  }, [user?.id]); // ✅ runs when user.id changes
+  }, [user?.id, resolveSenderName]); // ✅ runs when user.id changes
 
 
   return (

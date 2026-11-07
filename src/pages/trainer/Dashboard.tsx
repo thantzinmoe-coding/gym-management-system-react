@@ -9,7 +9,7 @@ import { authService } from "@/services/authService";
 interface StatCard {
   title: string;
   value: string | number;
-  icon: React.ComponentType<any>;
+  icon: React.ComponentType<{ className?: string }>;
   color: string;
 }
 

@@ -37,14 +37,14 @@ const Reviews = () => {
         const response = await feedbackService.listFeedbacks(0, 10);
         const reviewDtos = response.data; // depends on how ApiResponse is wrapped
 
-        console.log('Fetched review DTOs:', reviewDtos);
 
         // 2. Transform backend response into Review[]
-        const mappedReviews: Review[] = reviewDtos.map((f: any) => ({
-          id: f.id,
-          name: f.member?.name || 'Anonymous',
+        // The public feedback list returns only these fields (no names, by design).
+        const mappedReviews: Review[] = reviewDtos.map((f: FeedbackDto, index: number) => ({
+          id: f.id ?? index,
+          name: 'Gym member',
           rating: f.ratingPoints,
-          date: f.createdAt,
+          date: f.date,
           title: f.title || 'Member Review',
           review: f.comment,
           verified: true,
@@ -181,5 +181,16 @@ const Reviews = () => {
     </div>
   );
 };
+
+interface FeedbackDto {
+  id?: number;
+  memberId: number;
+  trainerId: number;
+  ratingPoints: number;
+  comment: string;
+  date: string;
+  title?: string;
+  trainerName?: string;
+}
 
 export default Reviews;

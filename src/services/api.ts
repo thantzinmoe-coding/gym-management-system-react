@@ -29,20 +29,18 @@ const processQueue = (error: Error | null, token: string | null) => {
   failedQueue = [];
 };
 
+// Public auth calls (sign in, register, OTP) must not carry a possibly expired token, and a
+// 401 from them means "wrong credentials", not "refresh the session".
+const isPublicAuthCall = (url?: string) =>
+  !!url && /(auth\/users(\/(login|verifyEmail|verifyAccount|resendCode))?|forgotPassword(\/(verifyCode|reset))?)\/?$/.test(url.split('?')[0]);
+
 // Add token to requests automatically
 api.interceptors.request.use(
   (config) => {
     const token = Cookies.get('token');
-    if (token) {
+    if (token && !isPublicAuthCall(config.url)) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    
-    // Debug logging (remove in production)
-    console.log('🚀 API Request:', {
-      url: config.baseURL + config.url,
-      method: config.method?.toUpperCase(),
-      headers: config.headers
-    });
     
     return config;
   },
@@ -55,26 +53,15 @@ api.interceptors.request.use(
 // Handle responses and errors with token refresh
 api.interceptors.response.use(
   (response) => {
-    // Debug logging (remove in production)
-    console.log('✅ API Response:', {
-      status: response.status,
-      url: response.config.url
-    });
     return response;
   },
   async (error: AxiosError): Promise<AxiosResponse | unknown> => {
-    console.error('❌ API Error:', {
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      url: error.config?.url,
-      message: error.message,
-      data: error.response?.data
-    });
     
     const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
     
     // Handle token expiration
-    if ((error.response?.status === 401 || error.response?.status === 403) && !originalRequest._retry) {
+    if ((error.response?.status === 401 || error.response?.status === 403) && !originalRequest._retry
+        && !isPublicAuthCall(originalRequest.url)) {
       originalRequest._retry = true;
 
       if (!isRefreshing) {
@@ -121,9 +108,13 @@ api.interceptors.response.use(
           localStorage.removeItem('user');
           
           // Redirect to auth page
-          setTimeout(() => {
-            window.location.href = '/login';
-          }, 3000);
+          // Send the user to sign in, but never reload the login page itself: that wiped the
+          // form while someone with an expired session was typing their password.
+          if (!window.location.pathname.startsWith('/login')) {
+            setTimeout(() => {
+              window.location.href = '/login';
+            }, 3000);
+          }
           return Promise.reject(err);
         }
       }

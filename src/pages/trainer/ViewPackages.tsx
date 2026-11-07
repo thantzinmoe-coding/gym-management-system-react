@@ -37,7 +37,7 @@ export default function ViewPackages() {
       setLoading(true);
       try {
         const response = await assignedGymPackageService.getAllAssignedPackagesByTrainerId(trainerId, 0, 20);
-        const data: TrainerPackage[] = response.data.map((pkg: any) => ({
+        const data: TrainerPackage[] = response.data.map((pkg: TrainerPackage & { schedule?: TrainerPackage["schedules"] }) => ({
           ...pkg,
           maxClients: pkg.type.toLowerCase() !== 'personal' ? 10 : 1, // If backend doesn't return maxClients, you can default
           schedules: pkg.schedule || [],
