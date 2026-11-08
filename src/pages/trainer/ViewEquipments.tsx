@@ -4,6 +4,7 @@ import { Settings } from "lucide-react";
 import { toast } from "sonner";
 import { useEquipments, Equipment } from "@/context/EquipmentContext";
 import Cookies from "js-cookie";
+import { CardGridSkeleton } from '@/components/ui/loading';
 
 export default function ViewEquipments() {
     const { equipments } = useEquipments(); // Access equipments from the context
@@ -55,14 +56,7 @@ export default function ViewEquipments() {
             <h1 className="text-3xl font-bold mb-6">View Equipments</h1>
 
             {loading ? (
-                <Card className="p-12 text-center">
-                    <div className="space-y-4">
-                        <Settings className="h-12 w-12 mx-auto text-muted-foreground" />
-                        <div>
-                            <h3 className="text-lg font-medium">Loading equipment...</h3>
-                        </div>
-                    </div>
-                </Card>
+                <CardGridSkeleton count={6} />
             ) : equipments.length === 0 ? (
                 <Card className="p-12 text-center">
                     <h3 className="text-lg font-medium">No equipment available</h3>

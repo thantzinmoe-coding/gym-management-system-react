@@ -15,10 +15,12 @@ import { gymPackageService } from '@/services/gymPackageService';
 import { assignedGymPackageService } from '@/services/assignedGymPackageService';
 import { scheduleService } from '@/services/scheduleService';
 import type { Package, Schedule } from "@/context/PackageContext";
+import { CardGridSkeleton } from '@/components/ui/loading';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function ManagePackages() {
   const { trainers } = useTrainers();
-  const { packages, setPackages, getAllGymPackages } = usePackages();
+  const { packages, loading: packagesLoading, setPackages, getAllGymPackages } = usePackages();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingPackage, setEditingPackage] = useState<Package | null>(null);
@@ -508,7 +510,7 @@ export default function ManagePackages() {
             <Users className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{personalPackages.length}</div>
+            {packagesLoading && packages.length === 0 ? <Skeleton className="h-8 w-10" /> : <div className="text-2xl font-bold">{personalPackages.length}</div>}
             <p className="text-xs text-muted-foreground">Packages</p>
           </CardContent>
         </Card>
@@ -518,7 +520,7 @@ export default function ManagePackages() {
             {/* <Package className="h-5 w-5 text-muted-foreground" /> */}
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{groupPackages.length}</div>
+            {packagesLoading && packages.length === 0 ? <Skeleton className="h-8 w-10" /> : <div className="text-2xl font-bold">{groupPackages.length}</div>}
             <p className="text-xs text-muted-foreground">Packages</p>
           </CardContent>
         </Card>
@@ -531,10 +533,14 @@ export default function ManagePackages() {
           <TabsTrigger value="group" className="data-[state=active]:bg-green-500 data-[state=active]:text-white">Group Session Packages</TabsTrigger>
         </TabsList>
         <TabsContent value="personal">
-          <PackageList packages={personalPackages} onEdit={handleEditPackage} onRemove={handleRemovePackage} />
+          {packagesLoading && packages.length === 0
+            ? <CardGridSkeleton count={4} className="mt-4 lg:grid-cols-2" />
+            : <PackageList packages={personalPackages} onEdit={handleEditPackage} onRemove={handleRemovePackage} />}
         </TabsContent>
         <TabsContent value="group">
-          <PackageList packages={groupPackages} onEdit={handleEditPackage} onRemove={handleRemovePackage} />
+          {packagesLoading && packages.length === 0
+            ? <CardGridSkeleton count={4} className="mt-4 lg:grid-cols-2" />
+            : <PackageList packages={groupPackages} onEdit={handleEditPackage} onRemove={handleRemovePackage} />}
         </TabsContent>
       </Tabs>
     </div>

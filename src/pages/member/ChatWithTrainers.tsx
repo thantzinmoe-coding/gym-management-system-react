@@ -7,6 +7,8 @@ import { useNotifications } from '@/context/NotificationContext';
 import { authService } from '@/services/authService';
 import { Search } from 'lucide-react';
 import Cookies from 'js-cookie';
+import { ListSkeleton } from '@/components/ui/loading';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface Message {
     id?: number;
@@ -58,6 +60,7 @@ export default function ChatWithTrainers() {
     const [rooms, setRooms] = useState<ChatRoom[]>([]);
     const [selectedRoom, setSelectedRoom] = useState<ChatRoom | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
+    const [loadingHistory, setLoadingHistory] = useState(false);
     const [input, setInput] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
     const [filterMode, setFilterMode] = useState<'all' | 'assigned'>('all');
@@ -242,11 +245,14 @@ export default function ChatWithTrainers() {
     useEffect(() => {
         if (!selectedRoom || !chatServiceRef.current || !currentUserId) return;
 
+        setLoadingHistory(true);
+        setMessages([]);
         chatServiceRef.current.getChatHistory(currentUserId, selectedRoom.otherUserId)
             .then(data => {
                 setMessages(Array.isArray(data) ? data : []);
             })
-            .catch(err => console.error('Failed to load history', err));
+            .catch(err => console.error('Failed to load history', err))
+            .finally(() => setLoadingHistory(false));
     }, [selectedRoom?.otherUserId, currentUserId]);
 
     // 5. ONLINE STATUS: Poll for online statuses
@@ -359,9 +365,7 @@ export default function ChatWithTrainers() {
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-3 space-y-2">
-                    {loadingRooms && (
-                        <p className="text-gray-500 text-center mt-4 text-sm">Loading trainers...</p>
-                    )}
+                    {loadingRooms && <ListSkeleton rows={6} />}
                     {!loadingRooms && filteredRooms.length === 0 && (
                         <p className="text-gray-500 text-center mt-4 text-sm">No trainers found.</p>
                     )}
@@ -468,7 +472,15 @@ export default function ChatWithTrainers() {
 
                         {/* Messages Area */}
                         <div className="flex-1 overflow-y-auto p-6 space-y-4">
-                            {messages.length === 0 && (
+                            {loadingHistory && messages.length === 0 && (
+                                <div className="space-y-4" aria-hidden>
+                                    <Skeleton className="h-12 w-2/3" />
+                                    <Skeleton className="ml-auto h-12 w-1/2" />
+                                    <Skeleton className="h-12 w-3/5" />
+                                    <Skeleton className="ml-auto h-12 w-2/5" />
+                                </div>
+                            )}
+                            {!loadingHistory && messages.length === 0 && (
                                 <div className="h-full flex flex-col items-center justify-center text-gray-400">
                                     <p className="text-sm">No messages yet with {selectedRoom.name}.</p>
                                     <p className="text-xs mt-1">Send a message below to start the conversation!</p>

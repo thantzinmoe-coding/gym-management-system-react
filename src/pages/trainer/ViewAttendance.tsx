@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { PageHeaderSkeleton, StatCardsSkeleton, PanelSkeleton } from '@/components/ui/loading';
 import { Calendar, Clock, Users, CheckCircle, XCircle, Search, Timer } from 'lucide-react'; // Import Timer icon
 // Ensure the import path is correct and includes TrainerAttendanceRecord and attendanceService
 import { attendanceService, TrainerAttendanceRecord } from '@/services/attendanceService'; // Assuming TrainerAttendanceRecord is exported and available here
@@ -208,8 +209,10 @@ export default function ViewAttendance() {
   // Render Loading or Error states
   if (loading) {
       return (
-          <div className="flex justify-center items-center h-screen">
-              <p>Loading attendance...</p>
+          <div className="space-y-6" role="status" aria-label="Loading">
+              <PageHeaderSkeleton />
+              <StatCardsSkeleton count={4} />
+              <PanelSkeleton className="h-80" />
           </div>
       );
   }

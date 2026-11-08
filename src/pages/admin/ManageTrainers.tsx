@@ -27,6 +27,9 @@ import { useToast } from '@/hooks/use-toast';
 import { trainerService } from '@/services/trainerService';
 import Cookies from 'js-cookie';
 import { manageUserService } from '@/services/manageUserService';
+import { ListSkeleton } from '@/components/ui/loading';
+import { Skeleton } from '@/components/ui/skeleton';
+import { initials, displayName, matches } from '@/lib/text';
 
 interface TrainerResponseDto {
   id: number;
@@ -41,6 +44,7 @@ interface TrainerResponseDto {
 
 export default function ManageTrainers() {
   const [trainers, setTrainers] = useState<TrainerResponseDto[]>([]);
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingTrainer, setEditingTrainer] = useState<TrainerResponseDto | null>(null);
@@ -65,6 +69,8 @@ export default function ManageTrainers() {
         description: "Failed to connect to the server.",
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
   };
   useEffect(() => {
@@ -196,7 +202,7 @@ export default function ManageTrainers() {
             <CardTitle>Total Trainers</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-black">{trainers.length}</p>
+            {loading && trainers.length === 0 ? <Skeleton className="h-9 w-12" /> : <p className="text-3xl font-bold text-black">{trainers.length}</p>}
           </CardContent>
         </Card>
 
@@ -205,7 +211,7 @@ export default function ManageTrainers() {
             <CardTitle>Active Trainers</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-black">{trainers.filter(t => t.status === 'ACTIVE').length}</p>
+            {loading && trainers.length === 0 ? <Skeleton className="h-9 w-12" /> : <p className="text-3xl font-bold text-black">{trainers.filter(t => t.status === 'ACTIVE').length}</p>}
           </CardContent>
         </Card>
       </div>
@@ -219,6 +225,7 @@ export default function ManageTrainers() {
           </div>
         </CardHeader>
         <CardContent>
+          {loading && trainers.length === 0 ? <ListSkeleton rows={6} /> : (
           <div className="space-y-4">
             {trainers.map(trainer => (
               <div key={trainer.id} className="flex items-center justify-between p-4 bg-white rounded-lg shadow">
@@ -226,10 +233,10 @@ export default function ManageTrainers() {
                 <div className="flex items-center space-x-4">
                   <Avatar className="h-12 w-12">
                     <AvatarImage src={trainer.avatarUrl || "/placeholder-avatar.jpg"} />
-                    <AvatarFallback className="text-lg">{trainer.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                    <AvatarFallback className="text-lg">{initials(trainer.name)}</AvatarFallback>
                   </Avatar>
                   <div>
-                    <p className="font-medium text-gray-900">{trainer.name}</p>
+                    <p className="font-medium text-gray-900">{displayName(trainer.name, 'Profile not completed')}</p>
                     <div className="flex space-x-4 text-sm text-gray-500 mt-1">
                       <p>Email: {trainer.email}</p>
                       <p>Phone: {trainer.phone}</p>
@@ -262,6 +269,7 @@ export default function ManageTrainers() {
             ))}
             {trainers.length === 0 && <p className="text-center text-gray-500 py-4">No trainers found.</p>}
           </div>
+          )}
         </CardContent >
       </Card >
 

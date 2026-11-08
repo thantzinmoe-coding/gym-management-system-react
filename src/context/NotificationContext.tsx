@@ -26,6 +26,8 @@ interface ChatMessage {
 }
 
 interface NotificationContextType {
+  /** True until the first notification fetch finishes. */
+  loading: boolean;
   notifications: Notification[];
   addNotification: (n: Notification) => void;
   markAllAsRead: (recipient?: string) => Promise<void>;
@@ -39,6 +41,7 @@ const NotificationContext = createContext<NotificationContextType | undefined>(u
 export const NotificationProvider = ({ children }: { children: React.ReactNode }) => {
   const user = authService.getCurrentUser(); // ✅ get logged-in user
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
   const [unreadChatCount, setUnreadChatCount] = useState(0);
 
   useEffect(() => {
@@ -118,6 +121,7 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
       if (client.active) {
         client.deactivate();
       }
+      setLoading(false);
       return;
     }
 
@@ -129,6 +133,8 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
         if (isMounted) setNotifications(data);
       } catch (err) {
         console.error("❌ Failed to fetch notifications:", err);
+      } finally {
+        if (isMounted) setLoading(false);
       }
     };
 
@@ -236,7 +242,7 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
 
 
   return (
-    <NotificationContext.Provider value={{ notifications, addNotification, markAllAsRead, unreadChatCount, resetChatCount, decrementChatCount }}>
+    <NotificationContext.Provider value={{ loading, notifications, addNotification, markAllAsRead, unreadChatCount, resetChatCount, decrementChatCount }}>
       {children}
     </NotificationContext.Provider>
   );

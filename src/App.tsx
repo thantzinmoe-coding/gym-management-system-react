@@ -11,10 +11,12 @@ import { NotificationProvider } from "@/context/NotificationContext";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { EquipmentProvider } from "@/context/EquipmentContext";
 import { authService } from "@/services/authService";
+import { PublicPageSkeleton } from "@/components/ui/loading";
 
 // Auth pages
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 import Login from "./pages/Login";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 const Register = lazy(() => import("./pages/Register"));
 const VerifyOTP = lazy(() => import("./pages/VerifyOTP"));
 const MemberProfileSetup = lazy(() => import("./pages/MemberProfileSetup"));
@@ -92,7 +94,8 @@ const AppRoutes = () => {
 
   return (
     // Pages are split into separate chunks and loaded on first visit.
-    <Suspense fallback={<div className="flex min-h-screen items-center justify-center text-muted-foreground">Loading…</div>}>
+    <ErrorBoundary resetKey={window.location.pathname}>
+    <Suspense fallback={<PublicPageSkeleton />}>
     <Routes>
       {/* Public Routes */}
       <Route
@@ -354,6 +357,7 @@ const AppRoutes = () => {
       <Route path="*" element={<NotFound />} />
     </Routes>
     </Suspense>
+    </ErrorBoundary>
   );
 };
 

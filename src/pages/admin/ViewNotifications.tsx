@@ -10,10 +10,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useTrainers } from '@/context/TrainerContext';
 import { trainerService } from '@/services/trainerService';
 import { superAdminService } from '@/services/adminService';
+import { TableSkeleton } from '@/components/ui/loading';
 
 export default function ViewNotifications() {
   const [trainerApplications, setTrainerApplications] = useState([]);
   const [memberApplications, setMemberApplications] = useState([]);
+  const [trainersLoading, setTrainersLoading] = useState(true);
+  const [membersLoading, setMembersLoading] = useState(true);
   const [selectedTrainerApp, setSelectedTrainerApp] = useState(null);
   const [selectedMemberApp, setSelectedMemberApp] = useState(null);
 
@@ -40,6 +43,8 @@ export default function ViewNotifications() {
         description: "Failed to load trainer applications.",
         variant: "destructive"
       });
+    } finally {
+      setTrainersLoading(false);
     }
   };
   // Load applications
@@ -83,6 +88,8 @@ export default function ViewNotifications() {
         description: "Failed to load member booking requests.",
         variant: "destructive",
       });
+    } finally {
+      setMembersLoading(false);
     }
   };
   useEffect(() => {
@@ -263,7 +270,8 @@ export default function ViewNotifications() {
                 ))}
               </TableBody>
             </Table>
-            {trainerApplications.length === 0 && <p className="text-center py-4 text-muted-foreground">No trainer applications found.</p>}
+            {trainersLoading && trainerApplications.length === 0 && <TableSkeleton rows={3} className="py-4" />}
+            {!trainersLoading && trainerApplications.length === 0 && <p className="text-center py-4 text-muted-foreground">No trainer applications found.</p>}
           </CardContent>
         </Card>
       </div>
@@ -321,7 +329,8 @@ export default function ViewNotifications() {
                 ))}
               </TableBody>
             </Table>
-            {memberApplications.length === 0 && <p className="text-center py-4 text-muted-foreground">No member applications found.</p>}
+            {membersLoading && memberApplications.length === 0 && <TableSkeleton rows={3} className="py-4" />}
+            {!membersLoading && memberApplications.length === 0 && <p className="text-center py-4 text-muted-foreground">No member applications found.</p>}
           </CardContent>
         </Card>
       </div>

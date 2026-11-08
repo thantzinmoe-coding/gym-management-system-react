@@ -9,6 +9,7 @@ import { manageUserService } from '@/services/manageUserService';
 import { authService } from '@/services/authService';
 import { assignedGymPackageService } from '@/services/assignedGymPackageService';
 import { Schedule } from '@/context/PackageContext';
+import { PageHeaderSkeleton, StatCardsSkeleton, CardGridSkeleton } from '@/components/ui/loading';
 
 interface TrainerPackage {
   id: string;
@@ -79,7 +80,15 @@ export default function ViewPackages() {
     return (enrolled / max) * 100;
   };
 
-  if (loading) return <p className="text-muted-foreground">Loading packages...</p>;
+  if (loading) {
+    return (
+      <div className="space-y-6" role="status" aria-label="Loading">
+        <PageHeaderSkeleton />
+        <StatCardsSkeleton count={4} />
+        <CardGridSkeleton count={4} className="lg:grid-cols-2" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

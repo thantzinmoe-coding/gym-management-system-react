@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Clock, MapPin, Phone, Mail, Users, Award, Target, Zap, Facebook, Twitter, Instagram, Youtube } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 // Corrected: Import Navbar using a relative path from src/pages/Index.tsx
 // to src/components/layout/Navbar.tsx
@@ -20,6 +21,7 @@ const Index = () => {
   const [totalTrainers, setTotalTrainers] = useState<number>(0);
   const [totalClasses, setTotalClasses] = useState<number>(0);
   const [totalReviews, setTotalReviews] = useState<number>(0);
+  const [statsLoading, setStatsLoading] = useState(true);
 
   useEffect(() => {
     const fetchHomeSummary = async () => {
@@ -35,6 +37,8 @@ const Index = () => {
         setTotalReviews(reviews);
       } catch (err) {
         console.error("Error fetching home summary:", err);
+      } finally {
+        setStatsLoading(false);
       }
     };
 
@@ -125,19 +129,19 @@ const Index = () => {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
               <div className="transform transition-transform duration-300 ease-in-out hover:scale-105 p-4 rounded-lg bg-white shadow-md">
-                <div className="text-4xl md:text-6xl font-bold mb-2 text-black">{totalMembers.toLocaleString()}</div>
+                {statsLoading ? <Skeleton className="mx-auto mb-2 h-12 w-24 md:h-16" /> : <div className="text-4xl md:text-6xl font-bold mb-2 text-black">{totalMembers.toLocaleString()}</div>}
                 <div className="text-muted-foreground text-lg">Active Members</div>
               </div>
               <div className="transform transition-transform duration-300 ease-in-out hover:scale-105 p-4 rounded-lg bg-white shadow-md">
-                <div className="text-4xl md:text-6xl font-bold mb-2 text-black">{totalTrainers.toLocaleString()}</div>
+                {statsLoading ? <Skeleton className="mx-auto mb-2 h-12 w-24 md:h-16" /> : <div className="text-4xl md:text-6xl font-bold mb-2 text-black">{totalTrainers.toLocaleString()}</div>}
                 <div className="text-muted-foreground text-lg">Certified Trainers</div>
               </div>
               <div className="transform transition-transform duration-300 ease-in-out hover:scale-105 p-4 rounded-lg bg-white shadow-md">
-                <div className="text-4xl md:text-6xl font-bold mb-2 text-black">{totalClasses.toLocaleString()}</div>
+                {statsLoading ? <Skeleton className="mx-auto mb-2 h-12 w-24 md:h-16" /> : <div className="text-4xl md:text-6xl font-bold mb-2 text-black">{totalClasses.toLocaleString()}</div>}
                 <div className="text-muted-foreground text-lg">Weekly Classes</div>
               </div>
               <div className="transform transition-transform duration-300 ease-in-out hover:scale-105 p-4 rounded-lg bg-white shadow-md">
-                <div className="text-4xl md:text-6xl font-bold mb-2 text-black">{totalReviews.toLocaleString()}</div>
+                {statsLoading ? <Skeleton className="mx-auto mb-2 h-12 w-24 md:h-16" /> : <div className="text-4xl md:text-6xl font-bold mb-2 text-black">{totalReviews.toLocaleString()}</div>}
                 <div className="text-muted-foreground text-lg">5 ★ Reviews</div>
               </div>
             </div>

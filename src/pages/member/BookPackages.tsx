@@ -10,6 +10,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { authService } from '@/services/authService';
 import { bookPackageService } from "@/services/bookPackageService";
 import { RecommendedPackages } from '@/components/analytics/RecommendedPackages';
+import { CardGridSkeleton } from '@/components/ui/loading';
 
 // Define the type for the booking details based on your backend DTO
 interface BookPackageDetailResponseDto {
@@ -35,6 +36,8 @@ export default function BookPackages() {
 
   // State to hold the user's current active or pending booking
   const [currentBooking, setCurrentBooking] = useState<BookPackageDetailResponseDto | null>(null);
+  // True until the packages, trainers and the member's own bookings have all loaded.
+  const [pageLoading, setPageLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -78,7 +81,7 @@ export default function BookPackages() {
       }
     };
 
-    fetchData();
+    fetchData().finally(() => setPageLoading(false));
   }, [user?.id]); // Rerun effect if the user ID changes
 
   const handleBookPackage = async (packageId: number) => {
@@ -186,6 +189,7 @@ export default function BookPackages() {
         </TabsList>
 
         <TabsContent value="personal">
+          {pageLoading ? <CardGridSkeleton count={3} /> : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {personalPackages.map(pkg => (
               <PackageCard
@@ -199,9 +203,11 @@ export default function BookPackages() {
               />
             ))}
           </div>
+          )}
         </TabsContent>
 
         <TabsContent value="group">
+          {pageLoading ? <CardGridSkeleton count={3} /> : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {groupPackages.map(pkg => (
               <PackageCard
@@ -215,6 +221,7 @@ export default function BookPackages() {
               />
             ))}
           </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>

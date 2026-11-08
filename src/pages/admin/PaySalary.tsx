@@ -28,6 +28,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useTrainers, type Trainer } from "@/context/TrainerContext";
 import { salaryService } from "@/services/salaryService";
 import Cookies from "js-cookie";
+import { ListSkeleton } from '@/components/ui/loading';
+import { initials, displayName, matches } from '@/lib/text';
 
 // A salary record as returned by the backend.
 interface SalaryRecord {
@@ -46,7 +48,7 @@ type SalaryTrainer = Trainer & { role?: string };
 
 export default function PaySalary() {
   const { toast } = useToast();
-  const { trainers, getAllTrainers, getActiveTrainers } = useTrainers();
+  const { trainers, loading: trainersLoading, getAllTrainers, getActiveTrainers } = useTrainers();
   const [searchTerm, setSearchTerm] = useState("");
   const [isPayDialogOpen, setIsPayDialogOpen] = useState(false);
   const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false); // NEW state for history dialog
@@ -237,7 +239,7 @@ export default function PaySalary() {
   };
 
   const filteredTrainers = trainers.filter(trainer =>
-    trainer.name.toLowerCase().includes(searchTerm.toLowerCase())
+    matches(trainer.name, searchTerm)
   );
 
   useEffect(() => {
@@ -266,6 +268,7 @@ export default function PaySalary() {
           </div>
         </CardHeader>
         <CardContent>
+          {trainersLoading && trainers.length === 0 ? <ListSkeleton rows={6} /> : (
           <div className="space-y-4">
             {filteredTrainers.map((trainer) => {
               const hoursWorked = totalHours[trainer.id] || 0;
@@ -287,11 +290,11 @@ export default function PaySalary() {
                       />
                     ) : (
                       <div className="h-12 w-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-lg font-medium">
-                        {trainer.name.split(" ").map((n: string) => n[0]).join("")}
+                        {initials(trainer.name)}
                       </div>
                     )}
                     <div>
-                      <p className="font-medium text-foreground">{trainer.name}</p>
+                      <p className="font-medium text-foreground">{displayName(trainer.name, 'Profile not completed')}</p>
                       <p className="text-xs text-muted-foreground">
                         {trainer.email || "No email"}
                       </p>
@@ -357,6 +360,7 @@ export default function PaySalary() {
               );
             })}
           </div>
+          )}
         </CardContent>
       </Card>
 

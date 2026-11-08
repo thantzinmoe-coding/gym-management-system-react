@@ -141,46 +141,34 @@ const getTrainerAttendanceRecords = async (trainerId: number): Promise<TrainerAt
         throw new Error(error.response?.data?.message || 'Failed to fetch trainer attendance');
     }
 };
-// Helper function to extract list of attendances from ApiResponse
-// Helper function to extract list of attendances from ApiResponse
-const extractAttendances = (response: AttendanceApiResponse) => {
-    if (response && response.data && response.data.attendances) {
-        return response.data.attendances.map((attendance: RawAttendance) => {
+// Turns one record from the backend into the shape the pages use (hours worked from the times).
+const toAttendanceRecord = (attendance: RawAttendance): AttendanceRecord => {
+    const date = attendance.date;
+    let hoursWorked = attendance.hoursWorked;
 
-            const timeInString = attendance.timeIn;
-             // Use the date to correctly calculate the date.
-            const date = attendance.date;
-
-            const timeIn = parse(timeInString, 'HH:mm', parseISO(date));
-
-            let hoursWorked = attendance.hoursWorked;
-
-            // set timeOut value
-            const timeOutString = attendance.timeOut;
-
-            // set the hours worked
-            if (timeOutString != null) {
-                const timeOut = parse(timeOutString, 'HH:mm', parseISO(date));
-                hoursWorked = differenceInHours(timeOut, timeIn);
-            }
-
-            return {
-                id: attendance.id,
-                userId: attendance.userId,
-                userName: attendance.userName,
-                userRole: attendance.userRole,
-                date: attendance.date,
-                timeIn: attendance.timeIn,
-                timeOut: attendance.timeOut,
-                attendanceType: attendance.attendanceType,
-                hoursWorked: hoursWorked,
-                packageDays: attendance.packageDays,
-                status : attendance.status,
-            };
-        });
+    if (attendance.timeOut != null) {
+        const timeIn = parse(attendance.timeIn, 'HH:mm', parseISO(date));
+        const timeOut = parse(attendance.timeOut, 'HH:mm', parseISO(date));
+        hoursWorked = differenceInHours(timeOut, timeIn);
     }
-    return [];
+
+    return {
+        id: attendance.id,
+        userId: attendance.userId,
+        userName: attendance.userName,
+        userRole: attendance.userRole,
+        date: attendance.date,
+        timeIn: attendance.timeIn,
+        timeOut: attendance.timeOut,
+        attendanceType: attendance.attendanceType,
+        hoursWorked: hoursWorked,
+        packageDays: attendance.packageDays,
+        status: attendance.status,
+    };
 };
+
+const extractAttendances = (response: AttendanceApiResponse) =>
+    (response?.data?.attendances ?? []).map(toAttendanceRecord);
 
 //Helper function to extract user ID
 const extractUserId = (response: AttendanceApiResponse) => {
@@ -216,12 +204,29 @@ const getAllUsers = async (role: 'trainer' | 'member' = 'trainer'): Promise<User
     }
 };
 
+export interface AttendancePage {
+    records: AttendanceRecord[];
+    totalItems: number;
+    totalPages: number;
+}
+
 export const attendanceService = {
-    getAllAttendance: async (type?: AttendanceType, days = 30): Promise<AttendanceRecord[]> => {
+    /** One page of records, newest first. Type, name search and paging all happen on the server. */
+    getAllAttendance: async (
+        type: AttendanceType | undefined,
+        options: { page?: number; size?: number; keyword?: string; days?: number } = {},
+    ): Promise<AttendancePage> => {
+        const { page = 1, size = 20, keyword, days = 30 } = options;
         try {
-            // Newest first, last `days` days, optionally one record type (server-side filters).
-            const response = await api.get(`${attendanceUrl}`, { params: { type, days } });
-            return extractAttendances(response.data);
+            const response = await api.get(`${attendanceUrl}`, {
+                params: { type, days, page: page - 1, size, keyword: keyword || undefined }, // the API counts pages from 0
+            });
+            const body = response.data;
+            return {
+                records: ((body?.data ?? []) as RawAttendance[]).map(toAttendanceRecord),
+                totalItems: body?.meta?.totalItems ?? 0,
+                totalPages: Math.max(1, body?.meta?.totalPages ?? 1),
+            };
         } catch (error) {
             console.error('Error fetching all attendance:', error);
             throw new Error(error.response?.data?.message || 'Failed to fetch all attendance');

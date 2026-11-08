@@ -29,7 +29,7 @@ export default function MembersAtRisk() {
         <CardHeader>
           <CardTitle>Your members</CardTitle>
           <CardDescription>
-            {list ? `${list.total} active members scored as of ${list.as_of}` : 'Loading…'}
+            {list ? `${list.total} active members scored as of ${list.as_of}` : <Skeleton className="h-4 w-64" />}
           </CardDescription>
         </CardHeader>
         <CardContent>

@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { trainerService } from '@/services/trainerService';
 import { feedbackService } from '@/services/feedbackService';
 import { authService } from '@/services/authService';
+import { PageHeaderSkeleton, PanelSkeleton } from '@/components/ui/loading';
 
 interface Trainer {
     id: number;
@@ -31,6 +32,7 @@ interface FeedbackHistory {
 export default function GiveFeedback() {
     const { toast } = useToast();
     const [trainers, setTrainers] = useState<Trainer[]>([]);
+    const [trainersLoading, setTrainersLoading] = useState(true);
     const [selectedTrainer, setSelectedTrainer] = useState('');
     const [rating, setRating] = useState(0);
     const [feedback, setFeedback] = useState('');
@@ -122,11 +124,22 @@ export default function GiveFeedback() {
           description: "Failed to connect to the server.",
           variant: "destructive",
         });
+      } finally {
+        setTrainersLoading(false);
       }
     };
 
     fetchTrainers();
   }, [toast]);
+
+    if (trainersLoading) {
+        return (
+            <div className="space-y-6" role="status" aria-label="Loading">
+                <PageHeaderSkeleton />
+                <PanelSkeleton className="h-96" />
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6">

@@ -10,6 +10,8 @@ import { useToast } from '@/hooks/use-toast';
 import { userService } from '@/services/userService';
 import { authService } from '@/services/authService';
 import Cookies from 'js-cookie';
+import { PageHeaderSkeleton, FormSkeleton } from '@/components/ui/loading';
+import { initials, displayName, matches } from '@/lib/text';
 
 export default function ManageProfile() {
   const { toast } = useToast();
@@ -31,6 +33,7 @@ export default function ManageProfile() {
     weight: '',
     profilePhoto: ''
   });
+  const [profileLoading, setProfileLoading] = useState(true);
 
   // ✅ Fetch profile from backend
   useEffect(() => {
@@ -78,7 +81,7 @@ export default function ManageProfile() {
       }
     };
 
-    fetchProfile();
+    fetchProfile().finally(() => setProfileLoading(false));
   }, [user.id]);
 
   // ✅ Handle input changes
@@ -162,6 +165,15 @@ export default function ManageProfile() {
     setIsEditing(!isEditing);
   };
 
+  if (profileLoading) {
+    return (
+      <div className="space-y-6" role="status" aria-label="Loading">
+        <PageHeaderSkeleton />
+        <FormSkeleton fields={7} />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -188,7 +200,7 @@ export default function ManageProfile() {
               <Avatar className="h-20 w-20">
                 <AvatarImage src={profilePhotoUrl || "/placeholder-avatar.jpg"} />
                 <AvatarFallback className="text-lg">
-                  {profile.name.split(' ').map(n => n[0]).join('')}
+                  {initials(profile.name)}
                 </AvatarFallback>
               </Avatar>
               {isEditing && (

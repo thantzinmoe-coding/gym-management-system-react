@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Users, UserCheck, Package, Star } from "lucide-react";
 import { trainerService } from "@/services/trainerService";
 import { authService } from "@/services/authService";
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface StatCard {
   title: string;
@@ -20,6 +21,7 @@ export default function TrainerDashboard() {
 
   const [totalMembers, setTotalMembers] = useState<number>(0);
   const [averageRating, setAverageRating] = useState<number>(0);
+  const [statsLoading, setStatsLoading] = useState(true);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -28,9 +30,11 @@ export default function TrainerDashboard() {
         setTotalMembers(members || 0);
 
         const rating = await trainerService.getTrainerAverageRating(trainerId);
-        setAverageRating(rating.averageRating);
+        setAverageRating(Number(rating?.averageRating) || 0); // no reviews yet -> 0
       } catch (error) {
         console.error("Error fetching trainer stats:", error);
+      } finally {
+        setStatsLoading(false);
       }
     };
 
@@ -64,7 +68,7 @@ export default function TrainerDashboard() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
+              {statsLoading ? <Skeleton className="h-8 w-20 bg-white/20" /> : <div className="text-2xl font-bold">{stat.value}</div>}
             </CardContent>
           </Card>
         ))}

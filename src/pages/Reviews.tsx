@@ -3,6 +3,7 @@ import { Navbar } from '@/components/layout/Navbar';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { feedbackService } from '@/services/feedbackService';
+import { CardGridSkeleton } from '@/components/ui/loading';
 interface Review {
   id: number;
   name: string;
@@ -111,9 +112,7 @@ const Reviews = () => {
         </div>
 
         {isLoading ? (
-          <div className="text-center py-16">
-            <p className="text-muted-foreground text-lg">Loading reviews...</p>
-          </div>
+          <CardGridSkeleton count={4} className="lg:grid-cols-2" />
         ) : (
           <>
             {/* Review Statistics */}

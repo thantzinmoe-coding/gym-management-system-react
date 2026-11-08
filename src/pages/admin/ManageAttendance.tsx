@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,9 @@ import { attendanceService, AttendanceRecord, User, AttendanceCreateData } from 
 import { toast } from "sonner";
 import { format, parseISO, differenceInHours, parse } from 'date-fns';
 import { AttendanceType } from '@/services/attendanceService';
+import { ListSkeleton } from '@/components/ui/loading';
+import { initials, displayName } from '@/lib/text';
+import { Pager } from '@/components/ui/pager';
 
 type AttendanceStatus = 'ACTIVE' | 'INACTIVE';
 
@@ -38,14 +41,19 @@ export default function ManageAttendance() {
 
     const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
     const [users, setUsers] = useState<User[]>([]);
+    const [recordsLoading, setRecordsLoading] = useState(true);
+    // Paging: the server returns one page (newest first) and does the name search.
+    const PAGE_SIZE = 20;
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalItems, setTotalItems] = useState(0);
+    const [query, setQuery] = useState(''); // the search text after a short typing pause
+    const latestRequest = useRef(0); // ignores a slow response that arrives after a newer one
     // Which records this page manages: trainer shifts or member check-ins.
     const [recordType, setRecordType] = useState<AttendanceType>(AttendanceType.TRAINER);
     const isTrainer = recordType === AttendanceType.TRAINER;
     const personLabel = isTrainer ? 'Trainer' : 'Member';
 
-    const filteredTrainerData = attendanceRecords
-        .filter(record => record.attendanceType === recordType)
-        .filter(item => item.userName.toLowerCase().includes(searchTerm.toLowerCase()));
 
     const formatTime = (timeString: string | null) => {
         if (!timeString) return '-';
@@ -58,20 +66,51 @@ export default function ManageAttendance() {
     };
 
 
+    // People for the "add record" form: reloaded when switching between trainers and members.
     useEffect(() => {
-        fetchAttendanceData();
         fetchUsers();
         setNewRecord(prev => ({ ...prev, userId: 0, attendanceType: recordType }));
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [recordType]);
 
+    // Wait for a pause in typing, then search from the first page.
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setQuery(searchTerm.trim());
+            setPage(1);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [searchTerm]);
+
+    useEffect(() => {
+        fetchAttendanceData();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [recordType, query, page]);
+
     const fetchAttendanceData = async () => {
+        const requestId = ++latestRequest.current;
+        setRecordsLoading(true);
         try {
-            const data = await attendanceService.getAllAttendance(recordType);
-            setAttendanceRecords(data);
+            const result = await attendanceService.getAllAttendance(recordType, { page, size: PAGE_SIZE, keyword: query });
+            if (requestId !== latestRequest.current) return; // a newer request is on its way
+            setAttendanceRecords(result.records);
+            setTotalItems(result.totalItems);
+            setTotalPages(result.totalPages);
+            // Records were removed and this page no longer exists: go to the last one.
+            if (page > result.totalPages) setPage(result.totalPages);
         } catch (error) {
-            toast.error(error.message || "Failed to fetch attendance data");
+            if (requestId === latestRequest.current) toast.error(error.message || "Failed to fetch attendance data");
+        } finally {
+            if (requestId === latestRequest.current) setRecordsLoading(false);
         }
+    };
+
+    const changeType = (type: AttendanceType) => {
+        if (type === recordType) return;
+        setAttendanceRecords([]);
+        setTotalItems(0);
+        setPage(1);
+        setRecordType(type);
     };
 
     const fetchUsers = async () => {
@@ -111,7 +150,8 @@ export default function ManageAttendance() {
                     status: newRecord.status
                 };
 
-                setAttendanceRecords([...attendanceRecords, recordToAdd]);
+                // New records are the newest, so they belong on the first page.
+                if (page === 1) fetchAttendanceData(); else setPage(1);
 
                 // Reset state
                 setNewRecord({
@@ -224,7 +264,8 @@ export default function ManageAttendance() {
     const handleDelete = async (id: number) => {
         try {
             await attendanceService.deleteAttendance(id);
-            setAttendanceRecords(attendanceRecords.filter(record => record.id !== id));
+            // Reload so the page refills from the next records and the counts stay right.
+            if (attendanceRecords.length === 1 && page > 1) setPage(page - 1); else fetchAttendanceData();
             toast.success("Attendance record deleted successfully");
         } catch (error) {
             toast.error(error.message || "Failed to delete attendance record");
@@ -252,7 +293,7 @@ export default function ManageAttendance() {
                     <div className="inline-flex rounded-md border p-1">
                         {[AttendanceType.TRAINER, AttendanceType.MEMBER].map(type => (
                             <Button key={type} size="sm" variant={recordType === type ? 'default' : 'ghost'}
-                                onClick={() => setRecordType(type)}>
+                                onClick={() => changeType(type)}>
                                 {type === AttendanceType.TRAINER ? 'Trainers' : 'Members'}
                             </Button>
                         ))}
@@ -367,15 +408,16 @@ export default function ManageAttendance() {
                     </div>
                 </CardHeader>
                 <CardContent>
+                    {recordsLoading ? <ListSkeleton rows={6} /> : (
                     <div className="space-y-4">
-                        {filteredTrainerData.map((record) => (
+                        {attendanceRecords.map((record) => (
                             <div key={record.id} className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
                                 <div className="flex items-center space-x-4">
                                     <div className="h-10 w-10 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center text-sm font-medium">
-                                        {record.userName.split(' ').map(n => n[0]).join('')}
+                                        {initials(record.userName)}
                                     </div>
                                     <div>
-                                        <p className="font-medium text-foreground">{record.userName}</p>
+                                        <p className="font-medium text-foreground">{displayName(record.userName, 'Profile not completed')}</p>
                                         <p className="text-sm text-muted-foreground">{format(parseISO(record.date), 'MM/dd/yyyy')}</p>
                                     </div>
                                 </div>
@@ -413,7 +455,22 @@ export default function ManageAttendance() {
                                 </div>
                             </div>
                         ))}
+                        {attendanceRecords.length === 0 && (
+                            <p className="py-8 text-center text-muted-foreground">
+                                {query ? `No ${personLabel.toLowerCase()} attendance matches "${query}".` : `No ${personLabel.toLowerCase()} attendance in the last 30 days.`}
+                            </p>
+                        )}
                     </div>
+                    )}
+                    <Pager
+                        page={page}
+                        totalPages={totalPages}
+                        totalItems={totalItems}
+                        pageSize={PAGE_SIZE}
+                        onPageChange={setPage}
+                        disabled={recordsLoading}
+                        noun="records"
+                    />
                 </CardContent>
             </Card>
         </div>

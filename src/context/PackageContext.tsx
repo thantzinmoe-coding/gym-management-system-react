@@ -25,6 +25,8 @@ export interface Package {
 
 interface PackageContextType {
   packages: Package[];
+  /** True until the first package fetch finishes. */
+  loading: boolean;
   setPackages: React.Dispatch<React.SetStateAction<Package[]>>;
   getAllGymPackages: () => Promise<void>;
 }
@@ -40,6 +42,7 @@ export const usePackages = () => {
 export const PackageProvider = ({ children }: { children: ReactNode }) => {
 
   const [packages, setPackages] = useState<Package[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const getAllGymPackages = async () => {
     try {
@@ -47,12 +50,14 @@ export const PackageProvider = ({ children }: { children: ReactNode }) => {
       setPackages(response.data);
     } catch (err) {
       console.error('Failed to fetch gym packages', err);
+    } finally {
+      setLoading(false);
     }
 
   }
 
   return (
-    <PackageContext.Provider value={{ packages, setPackages, getAllGymPackages }}>
+    <PackageContext.Provider value={{ packages, loading, setPackages, getAllGymPackages }}>
       {children}
     </PackageContext.Provider>
   );

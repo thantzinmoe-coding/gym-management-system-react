@@ -3,6 +3,7 @@ import {Navbar} from '@/components/layout/Navbar';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
+import { CardGridSkeleton } from '@/components/ui/loading';
 
 interface Service {
   id: number;
@@ -124,9 +125,7 @@ const Services = () => {
         {/* Services Grid */}
         <section>
           {services.length === 0 ? (
-            <div className="text-center py-16">
-              <p className="text-muted-foreground text-lg">Loading our services...</p>
-            </div>
+            <CardGridSkeleton count={6} />
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
               {services.map((service) => (

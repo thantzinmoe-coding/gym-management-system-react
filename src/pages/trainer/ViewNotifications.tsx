@@ -2,9 +2,10 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useNotifications } from "@/context/NotificationContext";
+import { ListSkeleton } from '@/components/ui/loading';
 
 export default function ViewNotifications() {
-  const { notifications, markAllAsRead } = useNotifications();
+  const { notifications, markAllAsRead, loading } = useNotifications();
   const [expandedIds, setExpandedIds] = useState([]);
   const hasUnread = notifications.some(n => !n.isRead);
 
@@ -48,7 +49,12 @@ export default function ViewNotifications() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {notifications.length === 0 && (
+              {loading && notifications.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} className="p-4"><ListSkeleton rows={4} /></TableCell>
+                </TableRow>
+              )}
+              {!loading && notifications.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-4 text-black">
                     No notifications

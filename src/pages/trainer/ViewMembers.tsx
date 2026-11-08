@@ -10,6 +10,8 @@ import { Search, User, Activity, Star, CreditCard, Phone, Calendar, Users, Messa
 import { manageUserService, BackendUser } from "@/services/manageUserService";
 import { authService } from "@/services/authService";
 import Cookies from "js-cookie";
+import { CardGridSkeleton } from '@/components/ui/loading';
+import { initials, displayName, matches } from '@/lib/text';
 
 interface MemberHealth {
   id: number;
@@ -112,8 +114,8 @@ export default function ViewMembers() {
 
 
   const filteredMembers = members.filter((member) =>
-    member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    member.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    matches(member.name, searchTerm) ||
+    matches(member.email, searchTerm) ||
     member.nrc?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     member.phone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     member.dob?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -140,7 +142,7 @@ export default function ViewMembers() {
 
       {/* Members List */}
       {loading ? (
-        <p className="text-muted-foreground">Loading members...</p>
+        <CardGridSkeleton count={4} className="lg:grid-cols-2" />
       ) : filteredMembers.length === 0 ? (
         <p className="text-muted-foreground text-center">No members found who are booked gym packages you have assigned.</p>
       ) : (

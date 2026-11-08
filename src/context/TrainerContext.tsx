@@ -24,6 +24,8 @@ export interface Trainer {
 
 interface TrainerContextType {
   trainers: Trainer[];
+  /** True until the first trainer fetch finishes (and while a later one runs). */
+  loading: boolean;
   addTrainer: (trainer: Omit<Trainer, "id">) => void;
   updateTrainer: (id: string, trainer: Partial<Trainer>) => void;
   removeTrainer: (id: string) => void;
@@ -42,22 +44,25 @@ export const useTrainers = () => {
 
 export const TrainerProvider = ({ children }: { children: ReactNode }) => {
   const [trainers, setTrainers] = useState<Trainer[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Runs one of the three list fetches, tracking `loading`. Errors still reach the caller.
+  const load = async (fetchList: () => Promise<{ data: Trainer[] }>) => {
+    setLoading(true);
+    try {
+      const result = await fetchList();
+      setTrainers(result.data);
+    } finally {
+      setLoading(false);
+    }
+  };
 
 
-  const getAvailableTrainers = async () => {
-    const data = await trainerService.getAllAvailableTrainers();
-    setTrainers(data.data);
-  }
+  const getAvailableTrainers = () => load(() => trainerService.getAllAvailableTrainers());
 
-  const getActiveTrainers = async () => {
-    const data = await trainerService.getAllActiveTrainers();
-    setTrainers(data.data);
-  }
+  const getActiveTrainers = () => load(() => trainerService.getAllActiveTrainers());
 
-  const getAllTrainers = async () => {
-    const data = await trainerService.getAllTrainers();
-    setTrainers(data.data);
-  }
+  const getAllTrainers = () => load(() => trainerService.getAllTrainers());
 
   const addTrainer = (newTrainer: Omit<Trainer, "id">) => {
     const trainer: Trainer = { ...newTrainer, id: Date.now().toString() };
@@ -73,7 +78,7 @@ export const TrainerProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <TrainerContext.Provider value={{ trainers, addTrainer, updateTrainer, removeTrainer, getAvailableTrainers, getAllTrainers, getActiveTrainers }}>
+    <TrainerContext.Provider value={{ trainers, loading, addTrainer, updateTrainer, removeTrainer, getAvailableTrainers, getAllTrainers, getActiveTrainers }}>
       {children}
     </TrainerContext.Provider>
   );

@@ -16,6 +16,8 @@ import { useToast } from '@/hooks/use-toast';
 import { trainerService, TrainerResponseDto } from '@/services/trainerService';
 import { Mail as MailIcon, Phone as PhoneIcon } from 'lucide-react';
 import Cookies from 'js-cookie';
+import { CardGridSkeleton } from '@/components/ui/loading';
+import { initials, displayName, matches } from '@/lib/text';
 
 // Define an interface for the trainer data we'll display, including rating
 // This extends the existing TrainerResponseDto to add rating information
@@ -37,6 +39,7 @@ export default function ViewTrainers() {
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
   const [trainerImages, setTrainerImages] = useState<Record<number, string>>({});
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchTrainerImages = async () => {
@@ -118,6 +121,8 @@ export default function ViewTrainers() {
           description: "Failed to connect to the server.",
           variant: "destructive",
         });
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -125,7 +130,7 @@ export default function ViewTrainers() {
   }, [toast]); // toast is a dependency for the hook
 
   const filteredTrainers = trainers.filter((trainer) =>
-    trainer.name.toLowerCase().includes(searchTerm.toLowerCase())
+    matches(trainer.name, searchTerm)
   );
 
   const getAvailabilityBadge = (availability: string) => {
@@ -167,7 +172,7 @@ export default function ViewTrainers() {
       )}
       {/* If count is 0, undefined, or not relevant, show the average rating value */}
       {(count === undefined || count === 0) && (
-        <span className="text-sm text-muted-foreground ml-1">{rating.toFixed(1)}</span>
+        <span className="text-sm text-muted-foreground ml-1">{Number(rating || 0).toFixed(1)}</span>
       )}
     </div>
   );
@@ -191,6 +196,7 @@ export default function ViewTrainers() {
         />
       </div>
 
+      {loading ? <CardGridSkeleton count={4} className="lg:grid-cols-2" /> : (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {filteredTrainers.map((trainer) => (
           <Card key={trainer.id}>
@@ -205,15 +211,12 @@ export default function ViewTrainers() {
                     />
                   ) : (
                     <div className="w-16 h-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xl font-bold">
-                      {trainer.name
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")}
+                      {initials(trainer.name)}
                     </div>
                   )}
 
                   <div>
-                    <CardTitle>{trainer.name}</CardTitle>
+                    <CardTitle>{displayName(trainer.name, 'Trainer')}</CardTitle>
                     <div className="flex items-center space-x-4 text-sm text-muted-foreground mt-1">
                       <div className="flex items-center">
                         <MailIcon className="h-3 w-3 mr-1" />
@@ -252,6 +255,7 @@ export default function ViewTrainers() {
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }

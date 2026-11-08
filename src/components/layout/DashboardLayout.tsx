@@ -5,7 +5,10 @@ import { TrainerSidebar } from './TrainerSidebar';
 import { MemberSidebar } from './MemberSidebar';
 import { Bell, MessageCircle } from 'lucide-react';
 import { authService } from '@/services/authService';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Suspense } from 'react';
+import { PageSkeleton } from '@/components/ui/loading';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -20,6 +23,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const user = authService.getCurrentUser();
   const { notifications, unreadChatCount, resetChatCount } = useNotifications();
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Unread notifications for the current user's role
   let notificationCount = 0;
@@ -106,7 +110,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             </div>
           </header>
 
-          <div className="p-6">{children}</div>
+          <div className="p-6">
+            {/* The sidebar and header stay on screen while the page's code loads. */}
+            <ErrorBoundary resetKey={location.pathname}>
+              <Suspense fallback={<PageSkeleton />}>{children}</Suspense>
+            </ErrorBoundary>
+          </div>
         </main>
       </div>
     </SidebarProvider>

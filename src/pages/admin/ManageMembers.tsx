@@ -11,6 +11,9 @@ import { useToast } from '@/hooks/use-toast';
 import { Eye, Trash2, RefreshCw, Search, Filter, Weight } from 'lucide-react';
 import { manageUserService, BackendUser, MemberStatus, Status } from '@/services/manageUserService'; // Ensure MemberStatus and Status are imported
 import Cookies from 'js-cookie';
+import { TableSkeleton } from '@/components/ui/loading';
+import { Skeleton } from '@/components/ui/skeleton';
+import { initials, displayName, matches } from '@/lib/text';
 
 // Type definition for rows displayed in the table, including booking status and derived user status
 type UserRow = {
@@ -193,8 +196,8 @@ export default function ManageUser() {
     const lowerKeyword = keyword.trim().toLowerCase();
     if (lowerKeyword) {
       filtered = filtered.filter(user =>
-        user.name.toLowerCase().includes(lowerKeyword) ||
-        user.email.toLowerCase().includes(lowerKeyword) ||
+        matches(user.name, lowerKeyword) ||
+        matches(user.email, lowerKeyword) ||
         user.phone.toLowerCase().includes(lowerKeyword)
       );
     }
@@ -291,7 +294,7 @@ export default function ManageUser() {
           className="flex items-center gap-2"
         >
           <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          {loading ? 'Refreshing...' : 'Refresh'}
+          Refresh
         </Button>
       </div>
 
@@ -302,7 +305,7 @@ export default function ManageUser() {
             <CardTitle className="text-sm font-medium">Total Members</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalMemberCount}</div>
+            {loading && allMembers.length === 0 ? <Skeleton className="h-8 w-16" /> : <div className="text-2xl font-bold">{totalMemberCount}</div>}
             <p className="text-xs text-muted-foreground">All registered members</p>
           </CardContent>
         </Card>
@@ -312,7 +315,7 @@ export default function ManageUser() {
             <CardTitle className="text-sm font-medium">Active Members (Booked)</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{activeMemberCount}</div>
+            {loading && allMembers.length === 0 ? <Skeleton className="h-8 w-16" /> : <div className="text-2xl font-bold text-green-600">{activeMemberCount}</div>}
             <p className="text-xs text-muted-foreground">Members who have booked a package</p>
           </CardContent>
         </Card>
@@ -322,7 +325,7 @@ export default function ManageUser() {
             <CardTitle className="text-sm font-medium">Inactive Members (Not Booked)</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-600">{inactiveMemberCount}</div>
+            {loading && allMembers.length === 0 ? <Skeleton className="h-8 w-16" /> : <div className="text-2xl font-bold text-gray-600">{inactiveMemberCount}</div>}
             <p className="text-xs text-muted-foreground">Members who have not booked a package</p>
           </CardContent>
         </Card>
@@ -380,10 +383,15 @@ export default function ManageUser() {
         <CardHeader>
           <CardTitle>Members List</CardTitle>
           <CardDescription>
-            Showing {usersToDisplay.length} of {totalItems} members (Page {currentPage} of {totalPages})
+            {loading && allMembers.length === 0
+              ? <Skeleton className="inline-block h-4 w-56 align-middle" />
+              : `Showing ${usersToDisplay.length} of ${totalItems} members (Page ${currentPage} of ${totalPages})`}
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {loading && allMembers.length === 0 ? (
+            <TableSkeleton rows={8} />
+          ) : (
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -521,21 +529,12 @@ export default function ManageUser() {
               </TableBody>
             </Table>
           </div>
+          )}
 
           {/* Empty State: Shown when no users are found after filtering */}
           {!loading && usersToDisplay.length === 0 && (
             <div className="text-center py-8">
               <p className="text-gray-500">No members found matching your criteria.</p>
-            </div>
-          )}
-
-          {/* Loading State: Shown while data is being fetched */}
-          {loading && (
-            <div className="text-center py-8">
-              <div className="flex items-center justify-center gap-2">
-                <RefreshCw className="h-4 w-4 animate-spin" />
-                <p className="text-gray-500">Loading members...</p>
-              </div>
             </div>
           )}
 
