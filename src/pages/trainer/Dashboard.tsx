@@ -52,7 +52,7 @@ export default function TrainerDashboard() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold">Trainer Dashboard</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold">Trainer Dashboard</h1>
         <p className="text-gray-400 mt-1">Track your members and packages efficiently</p>
       </div>
 
@@ -83,7 +83,7 @@ export default function TrainerDashboard() {
           <CardDescription>Navigate to common tasks quickly</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <button
               onClick={() => navigate("/trainer/members")}
               className="p-4 border border-border rounded-lg hover:bg-accent transition-colors flex flex-col items-center"

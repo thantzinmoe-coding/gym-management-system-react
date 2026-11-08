@@ -234,7 +234,7 @@ export default function ChatWithTrainers() {
                     const matchedRoom = targetId
                         ? mappedRooms.find(r => r.otherUserId === targetId)
                         : null;
-                    setSelectedRoom(prev => prev || matchedRoom || mappedRooms[0]);
+                    setSelectedRoom(prev => prev || matchedRoom || (window.innerWidth >= 768 ? mappedRooms[0] : null));
                 }
             })
             .catch(err => console.error('Failed to load trainer chat contacts', err))
@@ -314,9 +314,9 @@ export default function ChatWithTrainers() {
     const hasAssignedTrainers = useMemo(() => rooms.some(r => r.isAssigned), [rooms]);
 
     return (
-        <div className="flex h-[80vh] bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200">
+        <div className="flex h-[calc(100dvh-6.5rem)] sm:h-[80vh] bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200">
             {/* Sidebar */}
-            <div className="w-80 border-r border-gray-200 flex flex-col bg-gray-50">
+            <div className={`${selectedRoom ? 'hidden md:flex' : 'flex'} w-full md:w-80 shrink-0 border-r border-gray-200 flex-col bg-gray-50`}>
                 <div className="p-4 border-b border-gray-200 bg-white space-y-3">
                     <div className="flex items-center justify-between">
                         <h3 className="text-lg font-semibold text-gray-800">Trainers</h3>
@@ -440,14 +440,17 @@ export default function ChatWithTrainers() {
             </div>
 
             {/* Chat Area */}
-            <div className="flex-1 flex flex-col bg-gray-50 relative">
+            <div className={`${selectedRoom ? 'flex' : 'hidden md:flex'} flex-1 min-w-0 flex-col bg-gray-50 relative`}>
                 {selectedRoom ? (
                     <>
                         {/* Chat Header */}
-                        <div className="px-6 py-4 border-b border-gray-200 bg-white flex items-center justify-between shadow-sm z-10">
-                            <div className="flex items-center">
-                                <SecureAvatar url={selectedRoom.avatarUrl} name={selectedRoom.name} className="w-10 h-10 mr-4" />
-                                <div>
+                        <div className="px-3 md:px-6 py-3 md:py-4 border-b border-gray-200 bg-white flex items-center justify-between shadow-sm z-10">
+                            <div className="flex items-center min-w-0">
+                                <button type="button" aria-label="Back to conversations" onClick={() => setSelectedRoom(null)} className="md:hidden mr-2 p-1 -ml-1 rounded-full text-gray-600 hover:bg-gray-100">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+                                </button>
+                                <SecureAvatar url={selectedRoom.avatarUrl} name={selectedRoom.name} className="w-10 h-10 mr-3 md:mr-4 shrink-0" />
+                                <div className="min-w-0">
                                     <div className="flex items-center gap-2">
                                         <h2 className="text-lg font-semibold text-gray-800">{selectedRoom.name}</h2>
                                         {selectedRoom.isAssigned && (
@@ -463,7 +466,7 @@ export default function ChatWithTrainers() {
                                             <p className="text-xs text-gray-400 font-medium">Offline</p>
                                         )}
                                         {selectedRoom.email && (
-                                            <span className="text-xs text-gray-400">• {selectedRoom.email}</span>
+                                            <span className="hidden sm:inline truncate text-xs text-gray-400">• {selectedRoom.email}</span>
                                         )}
                                     </div>
                                 </div>
@@ -471,7 +474,7 @@ export default function ChatWithTrainers() {
                         </div>
 
                         {/* Messages Area */}
-                        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                        <div className="flex-1 overflow-y-auto p-3 md:p-6 space-y-4">
                             {loadingHistory && messages.length === 0 && (
                                 <div className="space-y-4" aria-hidden>
                                     <Skeleton className="h-12 w-2/3" />
@@ -493,7 +496,7 @@ export default function ChatWithTrainers() {
                                         key={msg.id ?? index}
                                         className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
                                     >
-                                        <div className={`px-4 py-2.5 rounded-2xl max-w-[75%] break-words shadow-sm ${
+                                        <div className={`px-4 py-2.5 rounded-2xl max-w-[85%] md:max-w-[75%] break-words shadow-sm ${
                                             isMe
                                                 ? 'bg-blue-600 text-white rounded-br-sm'
                                                 : 'bg-white text-gray-800 border border-gray-100 rounded-bl-sm'
@@ -512,14 +515,14 @@ export default function ChatWithTrainers() {
                         </div>
 
                         {/* Input Area */}
-                        <div className="p-4 bg-white border-t border-gray-200">
+                        <div className="p-2 md:p-4 bg-white border-t border-gray-200">
                             <div className="flex items-center gap-2">
                                 <input
                                     type="text"
                                     value={input}
                                     onChange={(e) => setInput(e.target.value)}
                                     onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                                    className="flex-1 py-3 px-4 bg-gray-100 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                                    className="flex-1 min-w-0 py-3 px-4 bg-gray-100 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
                                     placeholder={`Message ${selectedRoom.name}...`}
                                 />
                                 <button

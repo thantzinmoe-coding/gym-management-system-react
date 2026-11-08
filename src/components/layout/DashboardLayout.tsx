@@ -68,11 +68,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       <div className="min-h-screen flex w-full bg-background">
         {getSidebar()}
 
-        <main className="flex-1">
-          <header className="h-16 border-b border-border bg-card px-6 flex items-center justify-between">
+        <main className="flex-1 min-w-0">
+          <header className="sticky top-0 z-30 h-14 sm:h-16 border-b border-border bg-card px-3 sm:px-6 flex items-center justify-between">
             <SidebarTrigger />
 
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center gap-3 sm:gap-4 min-w-0">
               {(user?.role === 'trainer' || user?.role === 'member') && (
                 <>
                   {/* Chat icon with unread count */}
@@ -103,14 +103,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 </>
               )}
 
-              <span className="text-sm text-muted-foreground">Welcome, {user?.name}</span>
-              <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium">
+              <span className="hidden sm:inline truncate max-w-[12rem] text-sm text-muted-foreground">Welcome, {user?.name}</span>
+              <div className="h-8 w-8 shrink-0 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium">
                 {user?.name?.charAt(0).toUpperCase()}
               </div>
             </div>
           </header>
 
-          <div className="p-6">
+          <div className="p-3 sm:p-6">
             {/* The sidebar and header stay on screen while the page's code loads. */}
             <ErrorBoundary resetKey={location.pathname}>
               <Suspense fallback={<PageSkeleton />}>{children}</Suspense>

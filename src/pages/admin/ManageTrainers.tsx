@@ -188,15 +188,15 @@ export default function ManageTrainers() {
   };
 
   return (
-    <div className="space-y-6 p-6 bg-gray-50 min-h-screen">
+    <div className="space-y-6 p-3 sm:p-6 bg-gray-50 min-h-screen">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Manage Trainers</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Manage Trainers</h1>
         <p className="text-gray-600">Edit trainer status and view profile details</p>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
         <Card className="bg-white shadow rounded-lg text-black">
           <CardHeader>
             <CardTitle>Total Trainers</CardTitle>
@@ -228,21 +228,21 @@ export default function ManageTrainers() {
           {loading && trainers.length === 0 ? <ListSkeleton rows={6} /> : (
           <div className="space-y-4">
             {trainers.map(trainer => (
-              <div key={trainer.id} className="flex items-center justify-between p-4 bg-white rounded-lg shadow">
+              <div key={trainer.id} className="flex flex-col gap-3 p-3 sm:p-4 bg-white rounded-lg shadow sm:flex-row sm:items-center sm:justify-between">
                 {/* Trainer Info */}
-                <div className="flex items-center space-x-4">
-                  <Avatar className="h-12 w-12">
+                <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                  <Avatar className="h-12 w-12 shrink-0">
                     <AvatarImage src={trainer.avatarUrl || "/placeholder-avatar.jpg"} />
                     <AvatarFallback className="text-lg">{initials(trainer.name)}</AvatarFallback>
                   </Avatar>
-                  <div>
+                  <div className="min-w-0">
                     <p className="font-medium text-gray-900">{displayName(trainer.name, 'Profile not completed')}</p>
-                    <div className="flex space-x-4 text-sm text-gray-500 mt-1">
+                    <div className="flex flex-col sm:flex-row sm:space-x-4 text-sm text-gray-500 mt-1 break-all">
                       <p>Email: {trainer.email}</p>
                       <p>Phone: {trainer.phone}</p>
                     </div>
                     <Badge variant="outline">{trainer.experience} experience</Badge>
-                    <div className="flex space-x-2 mt-1">
+                    <div className="flex flex-wrap gap-1 mt-1">
                       {trainer.specialization?.map((spec: string, i: number) => (
                         <Badge key={i} variant="outline">{spec}</Badge>
                       ))}
@@ -251,7 +251,7 @@ export default function ManageTrainers() {
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center gap-2 shrink-0">
                   {getStatusBadge(trainer.status)}
                   <Button variant="outline" size="sm" onClick={() => handleEditTrainer(trainer)}>
                     <Edit className="h-4 w-4" />

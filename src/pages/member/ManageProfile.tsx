@@ -176,9 +176,9 @@ export default function ManageProfile() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Manage Profile</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Manage Profile</h1>
           <p className="text-muted-foreground">Update your personal and health details</p>
         </div>
         <Button onClick={handleToggleEdit}>
@@ -234,7 +234,7 @@ export default function ManageProfile() {
               <Input id="nrc" value={profile.nrc} onChange={(e) => handleInputChange('nrc', e.target.value)} disabled={!isEditing} />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="phone">Phone</Label>
                 <Input id="phone" value={profile.phone} onChange={(e) => handleInputChange('phone', e.target.value)} disabled={!isEditing} />
@@ -266,7 +266,7 @@ export default function ManageProfile() {
             <CardDescription>Editable fields: Height, Weight, Fitness Goals</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="height">Height (cm)</Label>
                 <Input id="height" type="number" value={profile.height} onChange={(e) => handleInputChange('height', e.target.value)} disabled={!isEditing} />

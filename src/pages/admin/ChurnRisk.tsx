@@ -69,7 +69,7 @@ export default function ChurnRisk() {
     <div className="space-y-6 p-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Churn Risk</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Churn Risk</h1>
           <p className="text-muted-foreground">
             Members likely to stop coming in the next 30 days, and why.
           </p>

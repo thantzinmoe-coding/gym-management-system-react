@@ -180,7 +180,7 @@ export default function ViewTrainers() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Our Trainers</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Our Trainers</h1>
         <p className="text-muted-foreground">
           Meet our certified fitness professionals
         </p>
@@ -201,23 +201,23 @@ export default function ViewTrainers() {
         {filteredTrainers.map((trainer) => (
           <Card key={trainer.id}>
             <CardHeader>
-              <div className="flex justify-between items-start">
-                <div className="flex items-center space-x-4">
+              <div className="flex flex-wrap justify-between items-start gap-3">
+                <div className="flex items-center gap-4 min-w-0">
                   {trainerImages[trainer.id] ? (
                     <img
                       src={trainerImages[trainer.id]}
                       alt={trainer.name}
-                      className="w-16 h-16 rounded-full object-cover"
+                      className="w-16 h-16 shrink-0 rounded-full object-cover"
                     />
                   ) : (
-                    <div className="w-16 h-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xl font-bold">
+                    <div className="w-16 h-16 shrink-0 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xl font-bold">
                       {initials(trainer.name)}
                     </div>
                   )}
 
-                  <div>
+                  <div className="min-w-0">
                     <CardTitle>{displayName(trainer.name, 'Trainer')}</CardTitle>
-                    <div className="flex items-center space-x-4 text-sm text-muted-foreground mt-1">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 text-sm text-muted-foreground mt-1 break-all">
                       <div className="flex items-center">
                         <MailIcon className="h-3 w-3 mr-1" />
                         {trainer.email}

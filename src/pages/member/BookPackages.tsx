@@ -156,7 +156,7 @@ export default function BookPackages() {
   return (
     <div className="space-y-6 p-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Book Packages</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Book Packages</h1>
         <p className="text-muted-foreground">Choose the perfect fitness package for your goals</p>
       </div>
 

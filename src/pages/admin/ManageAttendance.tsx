@@ -283,12 +283,12 @@ export default function ManageAttendance() {
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold text-foreground">Manage Attendance</h1>
+                    <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Manage Attendance</h1>
                     <p className="text-muted-foreground">Record trainer shifts and member check-ins</p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                     {/* Trainers / Members switch */}
                     <div className="inline-flex rounded-md border p-1">
                         {[AttendanceType.TRAINER, AttendanceType.MEMBER].map(type => (
@@ -411,17 +411,17 @@ export default function ManageAttendance() {
                     {recordsLoading ? <ListSkeleton rows={6} /> : (
                     <div className="space-y-4">
                         {attendanceRecords.map((record) => (
-                            <div key={record.id} className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-                                <div className="flex items-center space-x-4">
-                                    <div className="h-10 w-10 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center text-sm font-medium">
+                            <div key={record.id} className="flex flex-col gap-3 p-3 sm:p-4 bg-muted/50 rounded-lg lg:flex-row lg:items-center lg:justify-between">
+                                <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                                    <div className="h-10 w-10 shrink-0 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center text-sm font-medium">
                                         {initials(record.userName)}
                                     </div>
-                                    <div>
-                                        <p className="font-medium text-foreground">{displayName(record.userName, 'Profile not completed')}</p>
+                                    <div className="min-w-0">
+                                        <p className="font-medium text-foreground truncate">{displayName(record.userName, 'Profile not completed')}</p>
                                         <p className="text-sm text-muted-foreground">{format(parseISO(record.date), 'MM/dd/yyyy')}</p>
                                     </div>
                                 </div>
-                                <div className="flex items-center space-x-4">
+                                <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                                     <div className="text-center">
                                         <p className="text-sm font-medium">Check In</p>
                                         <p className="text-sm text-muted-foreground">

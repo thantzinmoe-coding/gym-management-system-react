@@ -173,9 +173,9 @@ export default function ManageTrainerProfile() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Manage Trainer Profile</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Manage Trainer Profile</h1>
           <p className="text-muted-foreground">Update your professional and personal details</p>
         </div>
         {/* Toggle button */}
@@ -225,7 +225,7 @@ export default function ManageTrainerProfile() {
             </div>
 
             {/* Phone + DOB */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="phone">Phone</Label>
                 <Input id="phone" value={profile.phone} onChange={(e) => handleInputChange('phone', e.target.value)} disabled={!isEditing} />

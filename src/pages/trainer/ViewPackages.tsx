@@ -93,7 +93,7 @@ export default function ViewPackages() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground">My Training Packages</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">My Training Packages</h1>
         <p className="text-muted-foreground">Manage and view your training packages and enrolled clients</p>
       </div>
 
@@ -153,7 +153,7 @@ export default function ViewPackages() {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 <div className="flex items-center space-x-2">
                   <Clock className="h-4 w-4 text-muted-foreground" />
                   <span>{pkg.duration}</span>

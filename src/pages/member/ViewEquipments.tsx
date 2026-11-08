@@ -53,7 +53,7 @@ export default function ViewEquipments() {
 
     return (
         <div className="container mx-auto px-4 py-8">
-            <h1 className="text-3xl font-bold mb-6">View Equipments</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold mb-6">View Equipments</h1>
 
             {loading ? (
                 <CardGridSkeleton count={6} />

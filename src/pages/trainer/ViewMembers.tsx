@@ -125,7 +125,7 @@ export default function ViewMembers() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-foreground">My Members</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">My Members</h1>
         <p className="text-muted-foreground">View health information of your assigned members</p>
       </div>
 
@@ -154,16 +154,16 @@ export default function ViewMembers() {
             return (
               <Card key={member.id}>
                 <CardHeader>
-                  <div className="flex justify-between items-start space-x-4">
+                  <div className="flex flex-wrap items-start gap-3">
                     <img
                       src={images[member.id] || `https://ui-avatars.com/api/?name=${member.name}`}
                       alt={member.name}
-                      className="w-16 h-16 rounded-full object-cover"
+                      className="w-16 h-16 shrink-0 rounded-full object-cover"
                     />
 
-                    <div className="flex-1">
-                      <CardTitle>{member.name}</CardTitle>
-                      <CardDescription>{member.email}</CardDescription>
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="break-words">{member.name}</CardTitle>
+                      <CardDescription className="break-all">{member.email}</CardDescription>
                     </div>
                     <Badge variant={bmiStatus.variant}>
                       BMI: {bmi} ({bmiStatus.label})

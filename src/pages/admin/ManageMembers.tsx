@@ -281,11 +281,11 @@ export default function ManageUser() {
   };
 
   return (
-    <div className="space-y-6 p-6 bg-gray-50 min-h-screen">
+    <div className="space-y-6 p-3 sm:p-6 bg-gray-50 min-h-screen">
       {/* Header Section */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Manage Members</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Manage Members</h1>
           <p className="text-gray-600 mt-1">View and manage all system members</p>
         </div>
         <Button
@@ -441,7 +441,7 @@ export default function ManageUser() {
                               <DialogTitle>Member Details</DialogTitle>
                             </DialogHeader>
                             {selectedUser && (
-                              <div className="grid grid-cols-2 gap-4 py-4">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4">
                                 {/* Left Column Details */}
                                 <div className="space-y-3">
                                   <div>
@@ -540,7 +540,7 @@ export default function ManageUser() {
 
           {/* Pagination Controls */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between mt-6">
+            <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-between mt-6">
               <p className="text-sm text-gray-600">
                 Showing page {currentPage} of {totalPages} ({totalItems} total members)
               </p>

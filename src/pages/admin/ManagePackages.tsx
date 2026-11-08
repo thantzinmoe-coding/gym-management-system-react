@@ -311,11 +311,11 @@ export default function ManagePackages() {
   const groupPackages = packages.filter((p: Package) => p.gymPackageType === 'GROUP');
 
   return (
-    <div className="space-y-6 p-6 bg-background text-foreground min-h-screen">
+    <div className="space-y-6 p-3 sm:p-6 bg-background text-foreground min-h-screen">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold">Manage Packages</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">Manage Packages</h1>
           <p className="text-muted-foreground">Create and manage membership packages</p>
         </div>
         <Button onClick={openAddDialog} className="bg-primary text-primary-foreground hover:bg-primary/90 font-semibold flex items-center">

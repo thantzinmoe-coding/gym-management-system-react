@@ -20,7 +20,7 @@ export default function MembersAtRisk() {
   return (
     <div className="space-y-6 p-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Members at Risk</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Members at Risk</h1>
         <p className="text-muted-foreground">
           Your members who may stop coming soon. A quick check-in can make the difference.
         </p>

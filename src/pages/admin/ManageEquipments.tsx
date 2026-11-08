@@ -50,11 +50,11 @@ export default function ManageEquipments() {
       {/* Header */}
       <div className="border-b bg-white">
         <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
               <Settings className="h-8 w-8 text-black" />
               <div>
-                <h1 className="text-3xl font-bold text-black">Manage Equipment</h1>
+                <h1 className="text-2xl sm:text-3xl font-bold text-black">Manage Equipment</h1>
                 <p className="text-muted-foreground">
                   Add, edit, and manage gym equipment
                 </p>
