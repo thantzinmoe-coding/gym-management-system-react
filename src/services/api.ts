@@ -31,16 +31,21 @@ const processQueue = (error: Error | null, token: string | null) => {
 
 // Public auth calls (sign in, register, OTP) must not carry a possibly expired token, and a
 // 401 from them means "wrong credentials", not "refresh the session".
-// The two profile-setup calls made right after sign-up are public too: the person has no session yet,
-// and a leftover token from an earlier login must not turn a failed save into a redirect to /login.
-const isPublicAuthCall = (url?: string) =>
-  !!url && /(auth\/users(\/(login|verifyEmail|verifyAccount|resendCode))?|forgotPassword(\/(verifyCode|reset))?|auth\/profile\/\d+\/create|auth\/user-detail-info\/\d+)\/?$/.test(url.split('?')[0]);
+// The two profile-setup saves made right after sign-up are public too (POST only: the same detail URL is
+// read and updated with a token later): the person has no session yet, and a leftover token from an
+// earlier login must not turn a failed save into a redirect to /login.
+const isPublicAuthCall = (url?: string, method?: string) => {
+  if (!url) return false;
+  const path = url.split('?')[0];
+  if (/(auth\/users(\/(login|verifyEmail|verifyAccount|resendCode))?|forgotPassword(\/(verifyCode|reset))?)\/?$/.test(path)) return true;
+  return String(method ?? '').toLowerCase() === 'post' && /(auth\/profile\/\d+\/create|auth\/user-detail-info\/\d+)\/?$/.test(path);
+};
 
 // Add token to requests automatically
 api.interceptors.request.use(
   (config) => {
     const token = Cookies.get('token');
-    if (token && !isPublicAuthCall(config.url)) {
+    if (token && !isPublicAuthCall(config.url, config.method)) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     
@@ -63,7 +68,7 @@ api.interceptors.response.use(
     
     // Handle token expiration
     if ((error.response?.status === 401 || error.response?.status === 403) && !originalRequest._retry
-        && !isPublicAuthCall(originalRequest.url)) {
+        && !isPublicAuthCall(originalRequest.url, originalRequest.method)) {
       originalRequest._retry = true;
 
       if (!isRefreshing) {
