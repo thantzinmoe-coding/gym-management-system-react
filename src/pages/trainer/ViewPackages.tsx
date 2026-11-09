@@ -9,6 +9,10 @@ import { manageUserService } from '@/services/manageUserService';
 import { authService } from '@/services/authService';
 import { assignedGymPackageService } from '@/services/assignedGymPackageService';
 import { Schedule } from '@/context/PackageContext';
+import { PageHeaderSkeleton, StatCardsSkeleton, CardGridSkeleton } from '@/components/ui/loading';
+import { Pager } from '@/components/ui/pager';
+
+const PAGE_SIZE = 12;
 
 interface TrainerPackage {
   id: string;
@@ -28,6 +32,9 @@ interface TrainerPackage {
 export default function ViewPackages() {
   const [packages, setPackages] = useState<TrainerPackage[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
   const trainer = authService.getCurrentUser();
   const trainerId = trainer?.id;
 
@@ -36,13 +43,15 @@ export default function ViewPackages() {
       if (!trainerId) return;
       setLoading(true);
       try {
-        const response = await assignedGymPackageService.getAllAssignedPackagesByTrainerId(trainerId, 0, 20);
-        const data: TrainerPackage[] = response.data.map((pkg: any) => ({
+        const response = await assignedGymPackageService.getAllAssignedPackagesByTrainerId(trainerId, page - 1, PAGE_SIZE);
+        const data: TrainerPackage[] = response.data.map((pkg: TrainerPackage & { schedule?: TrainerPackage["schedules"] }) => ({
           ...pkg,
           maxClients: pkg.type.toLowerCase() !== 'personal' ? 10 : 1, // If backend doesn't return maxClients, you can default
           schedules: pkg.schedule || [],
         }));
         setPackages(data);
+        setTotalItems(response.meta?.totalItems ?? data.length);
+        setTotalPages(Math.max(1, response.meta?.totalPages ?? 1));
       } catch (error) {
         console.error('Error fetching assigned packages:', error);
       } finally {
@@ -51,7 +60,7 @@ export default function ViewPackages() {
     };
 
     fetchPackages();
-  }, [trainerId]);
+  }, [trainerId, page]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -79,12 +88,21 @@ export default function ViewPackages() {
     return (enrolled / max) * 100;
   };
 
-  if (loading) return <p className="text-muted-foreground">Loading packages...</p>;
+  // The whole-page skeleton only for the first load; paging keeps the page and just fades the list.
+  if (loading && packages.length === 0) {
+    return (
+      <div className="space-y-6" role="status" aria-label="Loading">
+        <PageHeaderSkeleton />
+        <StatCardsSkeleton count={4} />
+        <CardGridSkeleton count={4} className="lg:grid-cols-2" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground">My Training Packages</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">My Training Packages</h1>
         <p className="text-muted-foreground">Manage and view your training packages and enrolled clients</p>
       </div>
 
@@ -144,7 +162,7 @@ export default function ViewPackages() {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 <div className="flex items-center space-x-2">
                   <Clock className="h-4 w-4 text-muted-foreground" />
                   <span>{pkg.duration}</span>
@@ -194,6 +212,7 @@ export default function ViewPackages() {
           </Card>
         ))}
       </div>
+      <Pager page={page} totalPages={totalPages} totalItems={totalItems} pageSize={PAGE_SIZE} onPageChange={setPage} disabled={loading} noun="packages" />
     </div>
   );
 }

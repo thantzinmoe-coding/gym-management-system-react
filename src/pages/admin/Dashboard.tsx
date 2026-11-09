@@ -10,6 +10,7 @@ import { manageUserService } from "@/services/manageUserService";
 import { trainerService } from "@/services/trainerService";
 import { equipmentService } from "@/services/equipmentService";
 import { gymPackageService } from "@/services/gymPackageService";
+import { Skeleton } from '@/components/ui/skeleton';
 // import { gymPackageService } from "@/services/gymPackageService"; // if you want real count
 
 export default function AdminDashboard() {
@@ -78,7 +79,7 @@ export default function AdminDashboard() {
     <div className="space-y-6">
       {/* ✅ Header */}
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Admin Dashboard</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Admin Dashboard</h1>
         <p className="text-muted-foreground">Manage your gym operations from here</p>
       </div>
 
@@ -91,7 +92,7 @@ export default function AdminDashboard() {
               <stat.icon className={`h-4 w-4 ${stat.color}`} />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{loading ? "..." : stat.value}</div>
+              {loading ? <Skeleton className="h-8 w-16" /> : <div className="text-2xl font-bold">{stat.value}</div>}
             </CardContent>
           </Card>
         ))}
@@ -104,6 +105,7 @@ export default function AdminDashboard() {
           <CardDescription>Members, Trainers, Equipment, and Packages</CardDescription>
         </CardHeader>
         <CardContent className="h-[350px]">
+          {loading ? <Skeleton className="h-full w-full" /> : (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -117,6 +119,7 @@ export default function AdminDashboard() {
               <Bar dataKey="Packages" fill="#f97316" />
             </BarChart>
           </ResponsiveContainer>
+          )}
         </CardContent>
       </Card>
     </div>

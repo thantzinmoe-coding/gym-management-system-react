@@ -8,7 +8,7 @@ export const bookPackageService = {
     try {
       const response = await api.post(`${bookPackageUrl}`, request);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error booking gym package:', error);
       throw error.response?.data || { message: 'Failed to book gym package' };
     }
@@ -19,7 +19,7 @@ export const bookPackageService = {
     try {
       const response = await api.delete(`${bookPackageUrl}/${bookingId}/cancel`);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error cancelling booking:', error);
       throw error.response?.data || { message: 'Failed to cancel booking' };
     }
@@ -32,7 +32,7 @@ export const bookPackageService = {
         params: { page, size },
       });
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching member bookings:', error);
       throw error.response?.data || { message: 'Failed to fetch bookings' };
     }
@@ -43,7 +43,7 @@ export const bookPackageService = {
     try {
       const response = await api.get(`${bookPackageUrl}/${bookingId}`);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching booking detail:', error);
       throw error.response?.data || { message: 'Failed to fetch booking detail' };
     }
@@ -57,7 +57,7 @@ export const bookPackageService = {
         { params: { page, size } }
       );
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching package bookings:', error);
       throw error.response?.data || { message: 'Failed to fetch package bookings' };
     }
@@ -70,7 +70,7 @@ export const bookPackageService = {
         `${bookPackageUrl}/trainer/${trainerId}/user-count`
       );
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching user count by trainer:', error);
       throw error.response?.data || { message: 'Failed to fetch user count' };
     }

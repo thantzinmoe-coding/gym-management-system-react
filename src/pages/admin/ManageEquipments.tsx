@@ -6,9 +6,10 @@ import { EquipmentCard } from "@/components/layout/EquipmentCard";
 import { EquipmentForm } from "@/components/layout/EquipmentForm";
 import { toast } from "sonner";
 import { useEquipments, Equipment, EquipmentFormData } from "@/context/EquipmentContext";
+import { CardGridSkeleton } from '@/components/ui/loading';
 
 export default function ManageEquipments() {
-  const { equipments, addEquipment, updateEquipment, deleteEquipment } = useEquipments();
+  const { equipments, loading, addEquipment, updateEquipment, deleteEquipment } = useEquipments();
   const [showForm, setShowForm] = useState(false);
   const [editingEquipment, setEditingEquipment] = useState<Equipment | undefined>();
 
@@ -49,11 +50,11 @@ export default function ManageEquipments() {
       {/* Header */}
       <div className="border-b bg-white">
         <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
               <Settings className="h-8 w-8 text-black" />
               <div>
-                <h1 className="text-3xl font-bold text-black">Manage Equipment</h1>
+                <h1 className="text-2xl sm:text-3xl font-bold text-black">Manage Equipment</h1>
                 <p className="text-muted-foreground">
                   Add, edit, and manage gym equipment
                 </p>
@@ -119,7 +120,9 @@ export default function ManageEquipments() {
             <div className="text-sm text-muted-foreground">{equipments.length} items</div>
           </div>
 
-          {equipments.length === 0 ? (
+          {loading && equipments.length === 0 ? (
+            <CardGridSkeleton count={6} />
+          ) : equipments.length === 0 ? (
             <Card className="p-12 text-center">
               <div className="space-y-4">
                 <Settings className="h-12 w-12 mx-auto text-muted-foreground" />

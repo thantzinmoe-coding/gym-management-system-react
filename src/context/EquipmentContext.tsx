@@ -23,6 +23,8 @@ export interface EquipmentFormData {
 
 interface EquipmentContextType {
   equipments: Equipment[];
+  /** True until the first equipment fetch finishes. */
+  loading: boolean;
   addEquipment: (data: EquipmentFormData) => Promise<void>;
   updateEquipment: (id: string, data: EquipmentFormData) => Promise<void>;
   deleteEquipment: (id: string) => Promise<void>;
@@ -32,15 +34,17 @@ const EquipmentContext = createContext<EquipmentContextType | undefined>(undefin
 
 export const EquipmentProvider = ({ children }: { children: ReactNode }) => {
   const [equipments, setEquipments] = useState<Equipment[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchEquipments = async () => {
       try {
         const equipmentsData = await equipmentService.getAllEquipments();
-        console.log("Fetched Equipments:", equipmentsData);
         setEquipments(equipmentsData);
       } catch (error) {
         console.error("Error fetching equipments:", error);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -94,7 +98,7 @@ export const EquipmentProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <EquipmentContext.Provider
-      value={{ equipments, addEquipment, updateEquipment, deleteEquipment }}
+      value={{ equipments, loading, addEquipment, updateEquipment, deleteEquipment }}
     >
       {children}
     </EquipmentContext.Provider>

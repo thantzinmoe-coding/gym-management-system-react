@@ -85,26 +85,47 @@ const basePath = '/api/v1'; // Replace with your actual base path
 const attendanceUrl = `${basePath}/attendance`;
 const superAdminUrl = `${basePath}/super_admin`; // Super Admin API
 
+// Attendance record as the backend returns it.
+interface RawAttendance {
+    id: number;
+    userId: number;
+    userName: string;
+    userRole: string;
+    date: string;
+    timeIn: string;
+    timeOut: string | null;
+    attendanceType: AttendanceType;
+    hoursWorked: number | null;
+    packageDays: number | null;
+    status: 'ACTIVE' | 'INACTIVE';
+}
+
+interface AttendanceApiResponse {
+    data?: { attendance?: RawAttendance; attendances?: RawAttendance[]; userId?: number };
+}
+
 // Helper function to extract data from ApiResponse
-const extractData = (response: any) => {
+const extractData = (response: AttendanceApiResponse) => {
     if (response && response.data && response.data.attendance) {
         return response.data.attendance;
     }
     return null;
 };
-const extractTrainerAttendance = (response: any): TrainerAttendanceRecord[] => {
+const extractTrainerAttendance = (response: AttendanceApiResponse): TrainerAttendanceRecord[] => {
     if (response && response.data && Array.isArray(response.data.attendances)) {
-        return response.data.attendances.map((attendance: any) => {
+        return response.data.attendances.map((attendance: RawAttendance) => {
             return {
                 id: attendance.id,
                 date: attendance.date,
                 timeIn: attendance.timeIn,
                 timeOut: attendance.timeOut,
-                clientName: attendance.clientName || 'N/A',
-                packageName: attendance.packageName || 'N/A',
-                sessionType: attendance.sessionType || 'N/A',
-                status: attendance.status || (attendance.timeOut ? 'present' : 'absent'),
-                notes: attendance.notes || null
+                // The backend sends who attended and the record type; it has no package/session fields.
+                clientName: attendance.userName || 'N/A',
+                packageName: 'N/A',
+                sessionType: attendance.attendanceType === AttendanceType.MEMBER ? 'Member visit' : 'Trainer shift',
+                // ACTIVE = present, INACTIVE = absent
+                status: attendance.status === 'INACTIVE' ? 'absent' : 'present',
+                notes: undefined
             };
         });
     }
@@ -115,54 +136,42 @@ const getTrainerAttendanceRecords = async (trainerId: number): Promise<TrainerAt
         // IMPORTANT: Ensure this API path matches your backend.
         const response = await api.get(`${basePath}/attendance/trainer/${trainerId}`); // Adjust URL as per your backend
         return extractTrainerAttendance(response.data);
-    } catch (error: any) {
+    } catch (error) {
         console.error(`Error fetching attendance for trainer ID ${trainerId}:`, error);
         throw new Error(error.response?.data?.message || 'Failed to fetch trainer attendance');
     }
 };
-// Helper function to extract list of attendances from ApiResponse
-// Helper function to extract list of attendances from ApiResponse
-const extractAttendances = (response: any) => {
-    if (response && response.data && response.data.attendances) {
-        return response.data.attendances.map((attendance: any) => {
+// Turns one record from the backend into the shape the pages use (hours worked from the times).
+const toAttendanceRecord = (attendance: RawAttendance): AttendanceRecord => {
+    const date = attendance.date;
+    let hoursWorked = attendance.hoursWorked;
 
-            const timeInString = attendance.timeIn;
-             // Use the date to correctly calculate the date.
-            const date = attendance.date;
-
-            const timeIn = parse(timeInString, 'HH:mm', parseISO(date));
-
-            let hoursWorked = attendance.hoursWorked;
-
-            // set timeOut value
-            const timeOutString = attendance.timeOut;
-
-            // set the hours worked
-            if (timeOutString != null) {
-                const timeOut = parse(timeOutString, 'HH:mm', parseISO(date));
-                hoursWorked = differenceInHours(timeOut, timeIn);
-            }
-
-            return {
-                id: attendance.id,
-                userId: attendance.userId,
-                userName: attendance.userName,
-                userRole: attendance.userRole,
-                date: attendance.date,
-                timeIn: attendance.timeIn,
-                timeOut: attendance.timeOut,
-                attendanceType: attendance.attendanceType,
-                hoursWorked: hoursWorked,
-                packageDays: attendance.packageDays,
-                status : attendance.status,
-            };
-        });
+    if (attendance.timeOut != null) {
+        const timeIn = parse(attendance.timeIn, 'HH:mm', parseISO(date));
+        const timeOut = parse(attendance.timeOut, 'HH:mm', parseISO(date));
+        hoursWorked = differenceInHours(timeOut, timeIn);
     }
-    return [];
+
+    return {
+        id: attendance.id,
+        userId: attendance.userId,
+        userName: attendance.userName,
+        userRole: attendance.userRole,
+        date: attendance.date,
+        timeIn: attendance.timeIn,
+        timeOut: attendance.timeOut,
+        attendanceType: attendance.attendanceType,
+        hoursWorked: hoursWorked,
+        packageDays: attendance.packageDays,
+        status: attendance.status,
+    };
 };
 
+const extractAttendances = (response: AttendanceApiResponse) =>
+    (response?.data?.attendances ?? []).map(toAttendanceRecord);
+
 //Helper function to extract user ID
-const extractUserId = (response: any) => {
+const extractUserId = (response: AttendanceApiResponse) => {
     if (response && response.data && response.data.userId) {
         return response.data.userId;
     }
@@ -183,23 +192,42 @@ const extractUsers = (response: PaginatedResponse<SuperAdminDashBoardResponse>) 
     return [];
 };
 
-//Updated get All Users
-const getAllUsers = async (): Promise<User[]> => {
+// Active users of one role (trainers by default), for the attendance form's person picker.
+const getAllUsers = async (role: 'trainer' | 'member' = 'trainer'): Promise<User[]> => {
     try {
-        const response = await api.get<PaginatedResponse<SuperAdminDashBoardResponse>>(`${superAdminUrl}/all-users?role=trainer&status=active`);
+        const response = await api.get<PaginatedResponse<SuperAdminDashBoardResponse>>(
+            `${superAdminUrl}/all-users`, { params: { role, status: 'active', page: 0, size: 1000 } });
         return extractUsers(response.data);
-    } catch (error: any) {
+    } catch (error) {
         console.error('Error fetching users:', error);
         throw new Error(error.response?.data?.message || 'Failed to fetch users');
     }
 };
 
+export interface AttendancePage {
+    records: AttendanceRecord[];
+    totalItems: number;
+    totalPages: number;
+}
+
 export const attendanceService = {
-    getAllAttendance: async (): Promise<AttendanceRecord[]> => {
+    /** One page of records, newest first. Type, name search and paging all happen on the server. */
+    getAllAttendance: async (
+        type: AttendanceType | undefined,
+        options: { page?: number; size?: number; keyword?: string; days?: number } = {},
+    ): Promise<AttendancePage> => {
+        const { page = 1, size = 20, keyword, days = 30 } = options;
         try {
-            const response = await api.get(`${attendanceUrl}`);
-            return extractAttendances(response.data);
-        } catch (error: any) {
+            const response = await api.get(`${attendanceUrl}`, {
+                params: { type, days, page: page - 1, size, keyword: keyword || undefined }, // the API counts pages from 0
+            });
+            const body = response.data;
+            return {
+                records: ((body?.data ?? []) as RawAttendance[]).map(toAttendanceRecord),
+                totalItems: body?.meta?.totalItems ?? 0,
+                totalPages: Math.max(1, body?.meta?.totalPages ?? 1),
+            };
+        } catch (error) {
             console.error('Error fetching all attendance:', error);
             throw new Error(error.response?.data?.message || 'Failed to fetch all attendance');
         }
@@ -209,7 +237,7 @@ export const attendanceService = {
         try {
             const response = await api.get(`${attendanceUrl}/${id}`);
             return extractData(response.data);
-        } catch (error: any) {
+        } catch (error) {
             console.error(`Error fetching attendance with ID ${id}:`, error);
             throw new Error(error.response?.data?.message || 'Failed to fetch attendance');
         }
@@ -220,7 +248,7 @@ export const attendanceService = {
         try {
             const response = await api.get(`${superAdminUrl}/all-users/email/${userEmail}`); // ASSUME THIS WORKS
             return extractUserId(response.data);
-        } catch (error: any) {
+        } catch (error) {
             console.error(`Error fetching user ID with email ${userEmail}:`, error);
             throw new Error(error.response?.data?.message || 'Failed to fetch user ID');
         }
@@ -233,7 +261,7 @@ export const attendanceService = {
         try {
             const response = await api.post(`${attendanceUrl}`, data);
             return extractData(response.data);
-        } catch (error: any) {
+        } catch (error) {
             console.error('Error adding attendance:', error);
             throw new Error(error.response?.data?.message || 'Failed to add attendance');
         }
@@ -243,7 +271,7 @@ export const attendanceService = {
         try {
             const response = await api.patch(`${attendanceUrl}/${id}`, data);
             return extractData(response.data);
-        } catch (error: any) {
+        } catch (error) {
             console.error(`Error updating attendance with ID ${id}:`, error);
             throw new Error(error.response?.data?.message || 'Failed to update attendance');
         }
@@ -252,7 +280,7 @@ export const attendanceService = {
     deleteAttendance: async (id: number): Promise<void> => {
         try {
             await api.delete(`${attendanceUrl}/${id}`);
-        } catch (error: any) {
+        } catch (error) {
             console.error(`Error deleting attendance with ID ${id}:`, error);
             throw new Error(error.response?.data?.message || 'Failed to delete attendance');
         }
@@ -262,7 +290,7 @@ export const attendanceService = {
             // Ensure this API path matches your backend
             const response = await api.get(`${basePath}/attendance/trainer/${trainerId}`); // Adjust URL as per your backend
             return extractTrainerAttendance(response.data);
-        } catch (error: any) {
+        } catch (error) {
             console.error(`Error fetching attendance for trainer ID ${trainerId}:`, error);
             throw new Error(error.response?.data?.message || 'Failed to fetch trainer attendance');
         }

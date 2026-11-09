@@ -78,6 +78,7 @@ export default function TrainerProfileSetup() {
           title: "Application Submitted!",
           description: "Your trainer application has been submitted. Wait for admin approval.",
         });
+        navigate('/login'); // only a finished application goes back to the login page
       } else {
         toast({
           title: "Error",
@@ -85,8 +86,6 @@ export default function TrainerProfileSetup() {
           variant: "destructive",
         });
       }
-
-      navigate('/login');
     } catch (error) {
       toast({
         title: "Error",

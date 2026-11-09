@@ -14,7 +14,6 @@ export const notificationService = {
 
   getForUser: async (userId: number) => {
     const response = await api.get(`${notificationUrl}/${userId}`);
-    console.log("Fetched notifications:", response.data);
     return response.data; // should be an array of notifications
   },
 

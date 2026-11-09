@@ -9,19 +9,29 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Edit, Trash2, Users } from 'lucide-react';
-import { useTrainers } from '@/context/TrainerContext';
+import { useTrainers, type Trainer } from '@/context/TrainerContext';
 import { usePackages } from '@/context/PackageContext';
 import { gymPackageService } from '@/services/gymPackageService';
 import { assignedGymPackageService } from '@/services/assignedGymPackageService';
 import { scheduleService } from '@/services/scheduleService';
 import type { Package, Schedule } from "@/context/PackageContext";
+import { CardGridSkeleton } from '@/components/ui/loading';
+import { Skeleton } from '@/components/ui/skeleton';
+import { usePending } from '@/hooks/use-pending';
+import { usePagedPackages } from '@/hooks/use-paged-packages';
+import { Pager } from '@/components/ui/pager';
 
 export default function ManagePackages() {
   const { trainers } = useTrainers();
-  const { packages, setPackages, getAllGymPackages } = usePackages();
+  const personal = usePagedPackages('PERSONAL');
+  const group = usePagedPackages('GROUP');
+  const reloadAll = () => {
+    personal.reload();
+    group.reload();
+  };
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingPackage, setEditingPackage] = useState<any>(null);
+  const [editingPackage, setEditingPackage] = useState<Package | null>(null);
   const [step, setStep] = useState<number>(1);
   const { getAvailableTrainers } = useTrainers();
 
@@ -39,7 +49,6 @@ export default function ManagePackages() {
 
   useEffect(() => {
     // Fetch available trainers when component mounts
-    getAllGymPackages();
     getAvailableTrainers();
   }, []);
 
@@ -83,6 +92,8 @@ export default function ManagePackages() {
     return end.toISOString().split('T')[0];
   };
 
+  const pending = usePending();
+
   const handleAddPackage = async () => {
     if (!newPackage.name || !newPackage.price || !newPackage.duration || !newPackage.trainerId || !newPackage.startDate || !newPackage.gymPackageType) {
       alert('Please complete all required fields.');
@@ -99,9 +110,7 @@ export default function ManagePackages() {
       // ✅ Call backend API
       const createdPackage = await gymPackageService.createGymPackage(packageData);
 
-      setPackages([...packages, createdPackage?.data?.Package]);
 
-      console.log("Created package:", createdPackage);
 
       const assignTrainer = async () => {
         try {
@@ -112,9 +121,7 @@ export default function ManagePackages() {
               gymPackageId: createdPackage?.data?.Package?.id
             });
 
-            setPackages([...packages, data]);  // Also correct here
 
-            console.log("Assigned successfully:", data);
           } else {
             console.warn("Package ID is undefined. Skipping trainer assignment.");
           }
@@ -140,18 +147,16 @@ export default function ManagePackages() {
 
         const data = await scheduleService.createBulkSchedules(bulkScheduleRequest);
 
-        setPackages([...packages, data]);
-        console.log("Bulk schedules created successfully!");
       }
 
       resetForm();
       setIsDialogOpen(false);
 
-    } catch (error: any) {
+    } catch (error) {
       console.error("Failed to create package:", error);
       alert(error.message || "Failed to create package.");
     }
-    getAllGymPackages();
+    reloadAll();
     getAvailableTrainers();
   };
 
@@ -204,34 +209,30 @@ export default function ManagePackages() {
 
         // Delete removed schedules
         const removed = existingSchedules.filter(
-          (old: any) => !schedules.some((s) => s.id === old.id)
+          (old: Schedule) => !schedules.some((s) => s.id === old.id)
         );
         for (const r of removed) {
           await scheduleService.deleteSchedule(r.id);
         }
       }
 
-      // 3️⃣ Update frontend state
-      if (updatedPackage) {
-        setPackages(packages.map((p: any) => p.id === editingPackage.id ? { ...updatedPackage, schedules } : p));
-      }
-
+      // 3️⃣ The lists reload at the end of this handler, so there is no local state to patch.
       alert(response?.message || "Package updated successfully.");
       resetForm();
       setIsDialogOpen(false);
 
-    } catch (error: any) {
+    } catch (error) {
       console.error("Failed to update package:", error);
       alert(error.message || "Failed to update package.");
     }
 
-    getAllGymPackages();
+    reloadAll();
     getAvailableTrainers();
   };
 
 
 
-  const handleEditPackage = (pkg: any) => {
+  const handleEditPackage = (pkg: Package) => {
     setEditingPackage(pkg);
 
     setNewPackage({
@@ -268,14 +269,13 @@ export default function ManagePackages() {
 
     try {
       await gymPackageService.deleteGymPackage(id);
-      setPackages(packages.filter((pkg: any) => pkg.id !== id));
       alert("Package deleted successfully.");
-    } catch (error: any) {
+    } catch (error) {
       console.error("Failed to delete package:", error);
       alert(error.message || "Failed to delete package.");
     }
 
-    getAllGymPackages();
+    reloadAll();
     getAvailableTrainers();
   };
 
@@ -308,15 +308,13 @@ export default function ManagePackages() {
     setSchedule(prev => prev.map(s => s.day === day ? { ...s, [field]: value } : s));
   };
 
-  const personalPackages = packages.filter((p: any) => p.gymPackageType === 'PERSONAL');
-  const groupPackages = packages.filter((p: any) => p.gymPackageType === 'GROUP');
 
   return (
-    <div className="space-y-6 p-6 bg-background text-foreground min-h-screen">
+    <div className="space-y-6 p-3 sm:p-6 bg-background text-foreground min-h-screen">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold">Manage Packages</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">Manage Packages</h1>
           <p className="text-muted-foreground">Create and manage membership packages</p>
         </div>
         <Button onClick={openAddDialog} className="bg-primary text-primary-foreground hover:bg-primary/90 font-semibold flex items-center">
@@ -403,7 +401,7 @@ export default function ManagePackages() {
               </div>
               <div className="md:col-span-2 flex justify-end space-x-2 mt-2">
                 <Button onClick={() => { setIsDialogOpen(false); resetForm(); }} variant="secondary">Cancel</Button>
-                <Button onClick={goToStep2} variant="primary">Next</Button>
+                <Button onClick={goToStep2} variant="default">Next</Button>
               </div>
             </div>
           )}
@@ -415,7 +413,7 @@ export default function ManagePackages() {
               <Select
                 value={newPackage.trainerId} // 👈 ensures default trainer is selected
                 onValueChange={(value) => {
-                  const selectedTrainer = trainers.find((t: any) => String(t.id) === value);
+                  const selectedTrainer = trainers.find((t: Trainer) => String(t.id) === value);
                   setNewPackage({ ...newPackage, trainerId: value, trainerName: selectedTrainer?.name || '' });
                   setTimeout(() => setStep(3), 150);
                 }}
@@ -426,7 +424,7 @@ export default function ManagePackages() {
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent className="bg-input text-foreground border-input">
-                  {(trainers ?? []).map((t: any) => (
+                  {(trainers ?? []).map((t: Trainer) => (
                     <SelectItem key={t.id} value={String(t.id)}>
                       {t.name}
                     </SelectItem>
@@ -439,7 +437,7 @@ export default function ManagePackages() {
                 <Button onClick={() => setStep(1)} variant="secondary">Back</Button>
                 <div className="flex space-x-2">
                   <Button onClick={() => { setIsDialogOpen(false); resetForm(); }} variant="secondary">Cancel</Button>
-                  <Button onClick={goToStep3} variant="primary">Next</Button>
+                  <Button onClick={goToStep3} variant="default">Next</Button>
                 </div>
               </div>
             </div>
@@ -493,7 +491,7 @@ export default function ManagePackages() {
                 <Button onClick={() => setStep(2)} variant="secondary">Back</Button>
                 <div className="flex space-x-2">
                   <Button onClick={() => { setIsDialogOpen(false); resetForm(); }} variant="secondary">Cancel</Button>
-                  <Button onClick={editingPackage ? handleUpdatePackage : handleAddPackage} variant="primary">
+                  <Button onClick={() => pending.run('save', editingPackage ? handleUpdatePackage : handleAddPackage)} loading={pending.isPending('save')} variant="default">
                     {editingPackage ? 'Update Package' : 'Save Package'}
                   </Button>
                 </div>
@@ -511,7 +509,7 @@ export default function ManagePackages() {
             <Users className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{personalPackages.length}</div>
+            {personal.loading && personal.items.length === 0 ? <Skeleton className="h-8 w-10" /> : <div className="text-2xl font-bold">{personal.totalItems}</div>}
             <p className="text-xs text-muted-foreground">Packages</p>
           </CardContent>
         </Card>
@@ -521,7 +519,7 @@ export default function ManagePackages() {
             {/* <Package className="h-5 w-5 text-muted-foreground" /> */}
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{groupPackages.length}</div>
+            {group.loading && group.items.length === 0 ? <Skeleton className="h-8 w-10" /> : <div className="text-2xl font-bold">{group.totalItems}</div>}
             <p className="text-xs text-muted-foreground">Packages</p>
           </CardContent>
         </Card>
@@ -534,10 +532,16 @@ export default function ManagePackages() {
           <TabsTrigger value="group" className="data-[state=active]:bg-green-500 data-[state=active]:text-white">Group Session Packages</TabsTrigger>
         </TabsList>
         <TabsContent value="personal">
-          <PackageList packages={personalPackages} onEdit={handleEditPackage} onRemove={handleRemovePackage} />
+          {personal.loading && personal.items.length === 0
+            ? <CardGridSkeleton count={4} className="mt-4 lg:grid-cols-2" />
+            : <PackageList packages={personal.items} onEdit={handleEditPackage} onRemove={(id, status) => pending.run(id, () => handleRemovePackage(id, status))} busy={pending.isPending} dimmed={personal.loading} />}
+          <Pager page={personal.page} totalPages={personal.totalPages} totalItems={personal.totalItems} pageSize={personal.pageSize} onPageChange={personal.setPage} disabled={personal.loading} noun="packages" />
         </TabsContent>
         <TabsContent value="group">
-          <PackageList packages={groupPackages} onEdit={handleEditPackage} onRemove={handleRemovePackage} />
+          {group.loading && group.items.length === 0
+            ? <CardGridSkeleton count={4} className="mt-4 lg:grid-cols-2" />
+            : <PackageList packages={group.items} onEdit={handleEditPackage} onRemove={(id, status) => pending.run(id, () => handleRemovePackage(id, status))} busy={pending.isPending} dimmed={group.loading} />}
+          <Pager page={group.page} totalPages={group.totalPages} totalItems={group.totalItems} pageSize={group.pageSize} onPageChange={group.setPage} disabled={group.loading} noun="packages" />
         </TabsContent>
       </Tabs>
     </div>
@@ -545,7 +549,7 @@ export default function ManagePackages() {
 }
 
 // StepDot component
-function StepDot({ label, active }: any) {
+function StepDot({ label, active }: { label: string; active: boolean }) {
   return (
     <div className="flex items-center gap-2">
       <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold ${active ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
@@ -557,10 +561,16 @@ function StepDot({ label, active }: any) {
 }
 
 // PackageList component
-function PackageList({ packages, onEdit, onRemove }: any) {
+function PackageList({ packages, onEdit, onRemove, busy, dimmed }: {
+  packages: Package[];
+  busy: (key: string | number) => boolean;
+  dimmed?: boolean;
+  onEdit: (pkg: Package) => void;
+  onRemove: (id: number, status: string) => void;
+}) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-      {(packages ?? []).map((pkg: any) => (
+    <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 transition-opacity ${dimmed ? "opacity-50 pointer-events-none" : ""}`}>
+      {(packages ?? []).map((pkg: Package) => (
         // ✅ ADD THIS CHECK HERE
         pkg.gymPackageType &&
         <div key={pkg.id} className="p-6 bg-card text-card-foreground rounded-xl shadow-lg border border-border hover:scale-105 transform transition-all duration-200">
@@ -572,8 +582,8 @@ function PackageList({ packages, onEdit, onRemove }: any) {
             </div>
             <div className="flex space-x-2">
               <Button variant="outline" size="sm" onClick={() => onEdit(pkg)}><Edit className="h-4 w-4" /></Button>
-              <Button variant="destructive" size="sm" onClick={() => onRemove(pkg.id, pkg.status)}>
-                <Trash2 className="h-4 w-4" />
+              <Button variant="destructive" size="sm" loading={busy(pkg.id)} onClick={() => onRemove(pkg.id, pkg.status)}>
+                {!busy(pkg.id) && <Trash2 className="h-4 w-4" />}
               </Button>
             </div>
           </div>
@@ -596,7 +606,7 @@ function PackageList({ packages, onEdit, onRemove }: any) {
 
           {pkg.schedules && pkg.schedules.length > 0 && (
             <div className="text-xs text-muted-foreground mt-1">
-              {pkg.schedules.map((s: any) => (
+              {pkg.schedules.map((s: Schedule) => (
                 <p key={s.day}>
                   {s.day}: {new Date(`1970-01-01T${s.startTime}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
                   - {new Date(`1970-01-01T${s.endTime}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}

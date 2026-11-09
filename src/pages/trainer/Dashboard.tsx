@@ -5,11 +5,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Users, UserCheck, Package, Star } from "lucide-react";
 import { trainerService } from "@/services/trainerService";
 import { authService } from "@/services/authService";
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface StatCard {
   title: string;
   value: string | number;
-  icon: React.ComponentType<any>;
+  icon: React.ComponentType<{ className?: string }>;
   color: string;
 }
 
@@ -20,6 +21,7 @@ export default function TrainerDashboard() {
 
   const [totalMembers, setTotalMembers] = useState<number>(0);
   const [averageRating, setAverageRating] = useState<number>(0);
+  const [statsLoading, setStatsLoading] = useState(true);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -28,9 +30,11 @@ export default function TrainerDashboard() {
         setTotalMembers(members || 0);
 
         const rating = await trainerService.getTrainerAverageRating(trainerId);
-        setAverageRating(rating.averageRating);
+        setAverageRating(Number(rating?.averageRating) || 0); // no reviews yet -> 0
       } catch (error) {
         console.error("Error fetching trainer stats:", error);
+      } finally {
+        setStatsLoading(false);
       }
     };
 
@@ -48,7 +52,7 @@ export default function TrainerDashboard() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold">Trainer Dashboard</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold">Trainer Dashboard</h1>
         <p className="text-gray-400 mt-1">Track your members and packages efficiently</p>
       </div>
 
@@ -64,7 +68,7 @@ export default function TrainerDashboard() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
+              {statsLoading ? <Skeleton className="h-8 w-20 bg-white/20" /> : <div className="text-2xl font-bold">{stat.value}</div>}
             </CardContent>
           </Card>
         ))}
@@ -79,7 +83,7 @@ export default function TrainerDashboard() {
           <CardDescription>Navigate to common tasks quickly</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <button
               onClick={() => navigate("/trainer/members")}
               className="p-4 border border-border rounded-lg hover:bg-accent transition-colors flex flex-col items-center"

@@ -10,7 +10,7 @@ const client = new Client({
     Authorization: `Bearer ${token}`, // ✅ send token during connect
   },
   reconnectDelay: 5000,
-  debug: (str) => console.log(str),
+  debug: () => {}, // STOMP debug output includes the CONNECT frame with the Bearer token
 });
 
 export default client;

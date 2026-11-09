@@ -1,239 +1,132 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Clock, CheckCircle, XCircle, TrendingUp } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Calendar, Clock, CheckCircle, XCircle, History } from 'lucide-react';
+import { format, parseISO } from 'date-fns';
+import { attendanceService, type TrainerAttendanceRecord } from '@/services/attendanceService';
+import { authService } from '@/services/authService';
 
-interface AttendanceRecord {
-  id: string;
-  date: string;
-  timeSlot: string;
-  status: 'present' | 'absent' | 'late';
-  trainerName: string;
-  packageName: string;
-  sessionType: string;
-  notes?: string;
-}
+const formatTime = (time: string | null) => {
+  if (!time || time === '00:00') return '—';
+  const [h, m] = time.split(':').map(Number);
+  const d = new Date();
+  d.setHours(h, m);
+  return format(d, 'hh:mm a');
+};
 
-const mockAttendance: AttendanceRecord[] = [
-  {
-    id: '1',
-    date: '2024-01-15',
-    timeSlot: '09:00 AM - 10:00 AM',
-    status: 'present',
-    trainerName: 'Alex Johnson',
-    packageName: 'Weight Loss Bootcamp',
-    sessionType: 'Personal Training'
-  },
-  {
-    id: '2',
-    date: '2024-01-14',
-    timeSlot: '08:00 AM - 09:00 AM',
-    status: 'present',
-    trainerName: 'Alex Johnson',
-    packageName: 'Weight Loss Bootcamp',
-    sessionType: 'Personal Training',
-    notes: 'Great workout session!'
-  },
-  {
-    id: '3',
-    date: '2024-01-12',
-    timeSlot: '09:00 AM - 10:00 AM',
-    status: 'late',
-    trainerName: 'Alex Johnson',
-    packageName: 'Weight Loss Bootcamp',
-    sessionType: 'Personal Training',
-    notes: '10 minutes late due to traffic'
-  },
-  {
-    id: '4',
-    date: '2024-01-10',
-    timeSlot: '09:00 AM - 10:00 AM',
-    status: 'absent',
-    trainerName: 'Alex Johnson',
-    packageName: 'Weight Loss Bootcamp',
-    sessionType: 'Personal Training',
-    notes: 'Called in sick'
-  },
-  {
-    id: '5',
-    date: '2024-01-08',
-    timeSlot: '09:00 AM - 10:00 AM',
-    status: 'present',
-    trainerName: 'Alex Johnson',
-    packageName: 'Weight Loss Bootcamp',
-    sessionType: 'Personal Training'
-  },
-  {
-    id: '6',
-    date: '2024-01-05',
-    timeSlot: '09:00 AM - 10:00 AM',
-    status: 'present',
-    trainerName: 'Alex Johnson',
-    packageName: 'Weight Loss Bootcamp',
-    sessionType: 'Personal Training'
-  }
-];
-
+/** The member's own check-ins, recorded by the front desk (Admin → Manage Attendance). */
 export default function ViewAttendance() {
-  const [attendance] = useState<AttendanceRecord[]>(mockAttendance);
-  const [selectedMonth, setSelectedMonth] = useState('2024-01');
+  const user = authService.getCurrentUser();
+  const [records, setRecords] = useState<TrainerAttendanceRecord[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedMonth, setSelectedMonth] = useState(format(new Date(), 'yyyy-MM'));
 
-  const filteredAttendance = attendance.filter(record => {
-    return record.date.startsWith(selectedMonth);
-  });
+  useEffect(() => {
+    if (!user?.id) return;
+    attendanceService
+      .getTrainerAttendanceRecords(Number(user.id)) // same endpoint serves members' own records
+      .then((data) => setRecords([...data].sort((a, b) => b.date.localeCompare(a.date))))
+      .catch((err) => setError(err?.message || 'Could not load your attendance.'));
+  }, [user?.id]);
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'present':
-        return <Badge variant="default" className="bg-green-500 hover:bg-green-600">Present</Badge>;
-      case 'late':
-        return <Badge variant="destructive" className="bg-orange-500 hover:bg-orange-600">Late</Badge>;
-      case 'absent':
-        return <Badge variant="destructive">Absent</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
+  const monthRecords = useMemo(
+    () => (records ?? []).filter((r) => r.date.startsWith(selectedMonth)),
+    [records, selectedMonth],
+  );
+  const visits = monthRecords.filter((r) => r.status === 'present').length;
+  const absences = monthRecords.filter((r) => r.status === 'absent').length;
+  const lastVisit = (records ?? []).find((r) => r.status === 'present');
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'present':
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'late':
-        return <Clock className="h-4 w-4 text-orange-500" />;
-      case 'absent':
-        return <XCircle className="h-4 w-4 text-red-500" />;
-      default:
-        return null;
-    }
-  };
-
-  const totalSessions = filteredAttendance.length;
-  const presentSessions = filteredAttendance.filter(a => a.status === 'present').length;
-  const lateSessions = filteredAttendance.filter(a => a.status === 'late').length;
-  const absentSessions = filteredAttendance.filter(a => a.status === 'absent').length;
-  const attendanceRate = totalSessions > 0 ? Math.round(((presentSessions + lateSessions) / totalSessions) * 100) : 0;
+  const cards = [
+    { title: 'Visits', value: visits, note: 'In the selected month', icon: CheckCircle, tone: 'text-green-600' },
+    { title: 'Absences', value: absences, note: 'Recorded in the selected month', icon: XCircle, tone: 'text-red-600' },
+    {
+      title: 'Last visit',
+      value: lastVisit ? format(parseISO(lastVisit.date), 'MMM d, yyyy') : '—',
+      note: lastVisit ? `Checked in at ${formatTime(lastVisit.timeIn)}` : 'No visits recorded yet',
+      icon: History,
+      tone: 'text-primary',
+    },
+  ];
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground">My Attendance</h1>
-        <p className="text-muted-foreground">Track your gym session attendance and progress</p>
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">My Attendance</h1>
+        <p className="text-muted-foreground">Your gym check-ins, as recorded at the front desk</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Attendance Rate</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-primary">{attendanceRate}%</div>
-            <p className="text-xs text-muted-foreground">This month</p>
-          </CardContent>
+      {error && (
+        <Card className="border-destructive">
+          <CardContent className="py-4 text-sm text-destructive">{error}</CardContent>
         </Card>
+      )}
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Present</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{presentSessions}</div>
-            <p className="text-xs text-muted-foreground">Sessions attended</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Late</CardTitle>
-            <Clock className="h-4 w-4 text-orange-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{lateSessions}</div>
-            <p className="text-xs text-muted-foreground">Late arrivals</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Absent</CardTitle>
-            <XCircle className="h-4 w-4 text-red-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{absentSessions}</div>
-            <p className="text-xs text-muted-foreground">Missed sessions</p>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+        {cards.map((c) => (
+          <Card key={c.title}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">{c.title}</CardTitle>
+              <c.icon className={`h-4 w-4 ${c.tone}`} />
+            </CardHeader>
+            <CardContent>
+              {records === null && !error ? (
+                <Skeleton className="h-8 w-20" />
+              ) : (
+                <div className={`text-2xl font-bold ${c.tone}`}>{c.value}</div>
+              )}
+              <p className="text-xs text-muted-foreground">{c.note}</p>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle>Attendance History</CardTitle>
-          <CardDescription>View your detailed attendance records</CardDescription>
-          
+          <CardDescription>Your check-in and check-out times</CardDescription>
           <div className="flex items-center space-x-4">
-            <label htmlFor="month-filter" className="text-sm font-medium">
-              Filter by Month:
-            </label>
-            <Input
-              id="month-filter"
-              type="month"
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
-              className="max-w-sm"
-            />
+            <label htmlFor="month-filter" className="text-sm font-medium">Month:</label>
+            <Input id="month-filter" type="month" value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)} className="max-w-sm" />
           </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {filteredAttendance.map((record) => (
-              <div key={record.id} className="p-4 bg-muted/50 rounded-lg">
-                <div className="flex justify-between items-start mb-3">
-                  <div className="flex items-center space-x-3">
-                    {getStatusIcon(record.status)}
-                    <div>
-                      <h4 className="font-medium text-foreground">{record.packageName}</h4>
-                      <p className="text-sm text-muted-foreground">with {record.trainerName}</p>
+          {records === null && !error ? (
+            <Skeleton className="h-40" />
+          ) : (
+            <div className="space-y-3">
+              {monthRecords.map((r) => (
+                <div key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-muted/50 p-4">
+                  <div className="flex items-center gap-3">
+                    {r.status === 'present'
+                      ? <CheckCircle className="h-4 w-4 text-green-500" />
+                      : <XCircle className="h-4 w-4 text-red-500" />}
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">{format(parseISO(r.date), 'EEE, MMM d, yyyy')}</span>
                     </div>
                   </div>
-                  {getStatusBadge(record.status)}
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Clock className="h-4 w-4" />
+                    {r.status === 'present' ? `${formatTime(r.timeIn)} – ${formatTime(r.timeOut)}` : 'Absent'}
+                  </div>
+                  {r.status === 'present'
+                    ? <Badge className="bg-green-500 hover:bg-green-600">Present</Badge>
+                    : <Badge variant="destructive">Absent</Badge>}
                 </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                  <div className="flex items-center space-x-2">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span>{record.date}</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
-                    <span>{record.timeSlot}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Type: </span>
-                    <span>{record.sessionType}</span>
-                  </div>
+              ))}
+              {monthRecords.length === 0 && (
+                <div className="py-8 text-center">
+                  <Calendar className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+                  <p className="text-muted-foreground">No attendance recorded for this month</p>
+                  <p className="text-sm text-muted-foreground">Try another month</p>
                 </div>
-                
-                {record.notes && (
-                  <div className="mt-3 pt-3 border-t border-border">
-                    <p className="text-sm text-muted-foreground">
-                      <strong>Notes:</strong> {record.notes}
-                    </p>
-                  </div>
-                )}
-              </div>
-            ))}
-            
-            {filteredAttendance.length === 0 && (
-              <div className="text-center py-8">
-                <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">No attendance records found for this month</p>
-                <p className="text-sm text-muted-foreground">Try selecting a different month</p>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

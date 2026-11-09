@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import {Navbar} from '@/components/layout/Navbar';
 import { Card } from '@/components/ui/card';
+import { CardGridSkeleton } from '@/components/ui/loading';
+import { initials, displayName, matches } from '@/lib/text';
 
 interface TeamMember {
   id: number;
@@ -122,15 +124,13 @@ const AboutUs = () => {
         <section>
           <h2 className="text-3xl font-bold text-center mb-12">Meet Our Team</h2>
           {teamMembers.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">Loading team information...</p>
-            </div>
+            <CardGridSkeleton count={3} />
           ) : (
             <div className="grid md:grid-cols-3 gap-8">
               {teamMembers.map((member) => (
                 <Card key={member.id} className="p-6 text-center">
                   <div className="w-24 h-24 bg-muted rounded-full mx-auto mb-4 flex items-center justify-center">
-                    <span className="text-2xl font-bold">{member.name.charAt(0)}</span>
+                    <span className="text-2xl font-bold">{initials(member.name).charAt(0)}</span>
                   </div>
                   <h3 className="text-xl font-semibold mb-2">{member.name}</h3>
                   <p className="text-primary font-medium mb-2">{member.role}</p>

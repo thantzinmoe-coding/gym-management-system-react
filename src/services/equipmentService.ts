@@ -9,6 +9,7 @@ export interface EquipmentResponse {
     lastMaintenanceDate: string;
     nextMaintenanceDate: string;
     equipmentPhoto?: string;
+    imageUrl?: string; // equipmentPhoto, mapped for the UI
 }
 
 interface ApiResponse<T> {
@@ -29,7 +30,7 @@ interface PaginatedEquipmentResponse {
 
 const equipmentUrl = "/api/v1/equipment";
 
-function toFormData(data: any): FormData {
+function toFormData(data: object): FormData {
     const formData = new FormData();
     Object.entries(data).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
@@ -81,7 +82,7 @@ export const equipmentService = {
         }
     },
 
-    addEquipment: async (data: any): Promise<EquipmentResponse> => {
+    addEquipment: async (data: object): Promise<EquipmentResponse> => {
         try {
             const formData = toFormData(data);
             const response = await api.post<ApiResponse<{ equipment: EquipmentResponse }>>(
@@ -90,7 +91,6 @@ export const equipmentService = {
                 { headers: { "Content-Type": "multipart/form-data" } }
             );
 
-            console.log("Add Equipment Response:", response.data);
             const equipment = response.data.data.equipment;
             return {
                 ...equipment,
@@ -104,7 +104,7 @@ export const equipmentService = {
     },
 
 
-    updateEquipment: async (id: string, data: any): Promise<EquipmentResponse> => {
+    updateEquipment: async (id: string, data: object): Promise<EquipmentResponse> => {
         try {
             const formData = toFormData(data);
             const response = await api.patch<ApiResponse<{ equipment: EquipmentResponse }>>(
@@ -112,7 +112,6 @@ export const equipmentService = {
                 formData,
                 { headers: { "Content-Type": "multipart/form-data" } }
             );
-            console.log("Update Equipment Response:", response.data);
             const equipment = response.data.data.equipment;
             return {
                 ...equipment,
@@ -138,7 +137,7 @@ export const equipmentService = {
         try {
             const response = await api.get<PaginatedEquipmentResponse>(`${equipmentUrl}?page=0&size=1`);
             return response.data.meta.totalItems; // ✅ use meta.totalItems
-        } catch (error: any) {
+        } catch (error) {
             console.error('Error fetching equipment count:', error);
             throw new Error(error.response?.data?.message || 'Failed to fetch equipment count');
         }

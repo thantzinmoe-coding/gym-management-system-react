@@ -1,3 +1,4 @@
+import type React from 'react';
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,6 +10,8 @@ import { useToast } from '@/hooks/use-toast';
 import { trainerService } from '@/services/trainerService';
 import { feedbackService } from '@/services/feedbackService';
 import { authService } from '@/services/authService';
+import { PageHeaderSkeleton, PanelSkeleton } from '@/components/ui/loading';
+import { usePending } from '@/hooks/use-pending';
 
 interface Trainer {
     id: number;
@@ -30,6 +33,7 @@ interface FeedbackHistory {
 export default function GiveFeedback() {
     const { toast } = useToast();
     const [trainers, setTrainers] = useState<Trainer[]>([]);
+    const [trainersLoading, setTrainersLoading] = useState(true);
     const [selectedTrainer, setSelectedTrainer] = useState('');
     const [rating, setRating] = useState(0);
     const [feedback, setFeedback] = useState('');
@@ -49,7 +53,9 @@ export default function GiveFeedback() {
         </div>
     );
 
-    const handleSubmitFeedback = async (e: any) => {
+  const pending = usePending();
+
+    const handleSubmitFeedback = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedTrainer || !rating || !feedback.trim()) {
             toast({
@@ -62,12 +68,6 @@ export default function GiveFeedback() {
 
         try {
 
-            console.log('Submitting feedback with data:', {
-                comment: feedback,
-                ratingPoints: rating,
-                member_id: userId,
-                trainer_id: selectedTrainer,
-            });
 
             const response = await feedbackService.giveFeedback({
                 comment: feedback,
@@ -76,7 +76,6 @@ export default function GiveFeedback() {
                 trainer_id: selectedTrainer,
             });
 
-            console.log('Feedback submission response:', response);
             toast({
                 title: "Feedback Submitted",
                 description: "Thank you for your feedback! It helps us improve our services.",
@@ -97,7 +96,7 @@ export default function GiveFeedback() {
             setRating(0);
             setFeedback('');
 
-        } catch (error: any) {
+        } catch (error) {
             console.error('Error submitting feedback:', error);
             toast({
                 title: "Error",
@@ -128,16 +127,27 @@ export default function GiveFeedback() {
           description: "Failed to connect to the server.",
           variant: "destructive",
         });
+      } finally {
+        setTrainersLoading(false);
       }
     };
 
     fetchTrainers();
   }, [toast]);
 
+    if (trainersLoading) {
+        return (
+            <div className="space-y-6" role="status" aria-label="Loading">
+                <PageHeaderSkeleton />
+                <PanelSkeleton className="h-96" />
+            </div>
+        );
+    }
+
     return (
         <div className="space-y-6">
             <div>
-                <h1 className="text-3xl font-bold text-foreground">Give Feedback</h1>
+                <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Give Feedback</h1>
                 <p className="text-muted-foreground">Share your experience with your trainer</p>
             </div>
 
@@ -154,7 +164,6 @@ export default function GiveFeedback() {
                         <div>
                             <label className="text-sm font-medium mb-2 block">Trainer</label>
                             <Select value={selectedTrainer} onValueChange={(value) => {
-                                console.log("Selected Trainer ID:", value);
                                 setSelectedTrainer(value);
                             }}>
                                 <SelectTrigger>
@@ -190,8 +199,8 @@ export default function GiveFeedback() {
                             />
                         </div>
 
-                        <Button onClick={handleSubmitFeedback} className="w-full">
-                            <Send className="h-4 w-4 mr-2" />
+                        <Button onClick={(e) => pending.run('submit', () => handleSubmitFeedback(e))} loading={pending.isPending('submit')} className="w-full">
+                            {!pending.isPending('submit') && <Send className="h-4 w-4 mr-2" />}
                             Submit Feedback
                         </Button>
                     </CardContent>

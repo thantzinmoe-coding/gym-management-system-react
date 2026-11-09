@@ -10,6 +10,9 @@ import { useToast } from '@/hooks/use-toast';
 import { userService } from '@/services/userService';
 import { authService } from '@/services/authService';
 import Cookies from 'js-cookie';
+import { PageHeaderSkeleton, FormSkeleton } from '@/components/ui/loading';
+import { initials, displayName, matches } from '@/lib/text';
+import { imageFetchInit } from '@/lib/imageAuth';
 
 export default function ManageTrainerProfile() {
   const { toast } = useToast();
@@ -29,6 +32,7 @@ export default function ManageTrainerProfile() {
     experience: '',
     profilePhoto: ''
   });
+  const [profileLoading, setProfileLoading] = useState(true);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -49,11 +53,7 @@ export default function ManageTrainerProfile() {
 
           if (userProfile.profilePic) {
             const token = Cookies.get('token'); // make sure you have this
-            const response = await fetch(`${userProfile.profilePic}`, {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            });
+            const response = await fetch(`${userProfile.profilePic}`, imageFetchInit(`${userProfile.profilePic}`, token));
             if (response.ok) {
               const blob = await response.blob();
               setProfilePhotoUrl(URL.createObjectURL(blob));
@@ -74,9 +74,8 @@ export default function ManageTrainerProfile() {
       }
     };
 
-    console.log('Fetching profile picture:', profile.profilePhoto);
 
-    fetchProfile();
+    fetchProfile().finally(() => setProfileLoading(false));
   }, [user.id]);
 
   const handleInputChange = (field: string, value: string) => {
@@ -160,11 +159,20 @@ export default function ManageTrainerProfile() {
     setIsEditing(!isEditing);
   };
 
+  if (profileLoading) {
+    return (
+      <div className="space-y-6" role="status" aria-label="Loading">
+        <PageHeaderSkeleton />
+        <FormSkeleton fields={7} />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Manage Trainer Profile</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Manage Trainer Profile</h1>
           <p className="text-muted-foreground">Update your professional and personal details</p>
         </div>
         {/* Toggle button */}
@@ -186,7 +194,7 @@ export default function ManageTrainerProfile() {
             <div className="flex items-center space-x-4 mb-6">
               <Avatar className="h-20 w-20">
                 <AvatarImage src={profilePhotoUrl || "/placeholder-avatar.jpg"} />
-                <AvatarFallback className="text-lg">{profile.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                <AvatarFallback className="text-lg">{initials(profile.name)}</AvatarFallback>
               </Avatar>
               {isEditing && (
                 <div>
@@ -214,7 +222,7 @@ export default function ManageTrainerProfile() {
             </div>
 
             {/* Phone + DOB */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="phone">Phone</Label>
                 <Input id="phone" value={profile.phone} onChange={(e) => handleInputChange('phone', e.target.value)} disabled={!isEditing} />

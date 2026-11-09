@@ -10,10 +10,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useTrainers } from '@/context/TrainerContext';
 import { trainerService } from '@/services/trainerService';
 import { superAdminService } from '@/services/adminService';
+import { TableSkeleton } from '@/components/ui/loading';
+import { usePending } from '@/hooks/use-pending';
 
 export default function ViewNotifications() {
   const [trainerApplications, setTrainerApplications] = useState([]);
   const [memberApplications, setMemberApplications] = useState([]);
+  const [trainersLoading, setTrainersLoading] = useState(true);
+  const [membersLoading, setMembersLoading] = useState(true);
   const [selectedTrainerApp, setSelectedTrainerApp] = useState(null);
   const [selectedMemberApp, setSelectedMemberApp] = useState(null);
 
@@ -23,7 +27,6 @@ export default function ViewNotifications() {
   const fetchTrainerApplications = async () => {
     try {
       const res = await trainerService.getTrainerApplications();
-      console.log("Trainer Applications API:", res);
 
       // handle both formats: {data: []} or []
       if (Array.isArray(res)) {
@@ -41,14 +44,21 @@ export default function ViewNotifications() {
         description: "Failed to load trainer applications.",
         variant: "destructive"
       });
+    } finally {
+      setTrainersLoading(false);
     }
   };
   // Load applications
 
   const fetchMemberApplications = async () => {
     try {
-      const res = await superAdminService.getAllBookings({});
-      console.log("Member Applications API:", res);
+      // Newest first. Pending requests (the ones to act on) come first, followed by the
+      // most recently approved bookings so an approved application does not just vanish.
+      const [pending, approved] = await Promise.all([
+        superAdminService.getAllBookings({ memberStatus: 'PENDING', size: 100 }),
+        superAdminService.getAllBookings({ memberStatus: 'ACTIVE', size: 20 }),
+      ]);
+      const res = { data: [...(pending?.data ?? []), ...(approved?.data ?? [])] };
 
       if (res && Array.isArray(res.data)) {
         const mapped = res.data.map((app) => ({
@@ -79,6 +89,8 @@ export default function ViewNotifications() {
         description: "Failed to load member booking requests.",
         variant: "destructive",
       });
+    } finally {
+      setMembersLoading(false);
     }
   };
   useEffect(() => {
@@ -92,6 +104,8 @@ export default function ViewNotifications() {
     return <Badge className={colors[status]}>{status.charAt(0).toUpperCase() + status.slice(1)}</Badge>;
   };
 
+
+  const pending = usePending();
 
   const acceptTrainerApplication = async (trainerId) => {
     try {
@@ -117,8 +131,7 @@ export default function ViewNotifications() {
       status: 'Active',
     });
 
-    acceptTrainerApplication(app.id);
-
+    return acceptTrainerApplication(app.id);
   };
 
   const rejectTrainer = async (trainerId) => {
@@ -135,7 +148,6 @@ export default function ViewNotifications() {
   const approveMember = async (id) => {
     try {
       const res = await superAdminService.approveMemberBooking(id);
-      console.log("Approve Member Response:", res);
       toast({ title: "Booking Approved", description: `${res?.data?.AcceptedBookingResponse?.memberId} booking approved.` });
       fetchMemberApplications();
     } catch (error) {
@@ -147,7 +159,6 @@ export default function ViewNotifications() {
   const rejectMember = async (id, email, packageName, name) => {
     try {
       const res = await superAdminService.rejectMemberBooking(id, email, packageName, name);
-      console.log("Reject Member Response:", res);
       toast({ title: "Booking Rejected", description: "Member booking rejected." });
       fetchMemberApplications();
     } catch (error) {
@@ -157,15 +168,15 @@ export default function ViewNotifications() {
   };
 
   const handleApproveMember = (app) => {
-    approveMember(app.bookingId);
+    return approveMember(app.bookingId);
   };
 
   const handleRejectMember = (app) => {
-    rejectMember(app.bookingId, app.email, app.packageName, app.fullName);
+    return rejectMember(app.bookingId, app.email, app.packageName, app.fullName);
   };
 
   const handleRejectTrainer = (app) => {
-    rejectTrainer(app.id);
+    return rejectTrainer(app.id);
   };
 
   // --- Render Details ---
@@ -247,12 +258,12 @@ export default function ViewNotifications() {
                       </Dialog>
                       {app.status.toLowerCase() === 'pending' && (
                         <>
-                          <Button size="sm" variant="default" className="bg-green-600 hover:bg-green-700" onClick={() => handleApproveTrainer(app)}>
-                            <Check className="h-4 w-4" />
+                          <Button size="sm" variant="default" className="bg-green-600 hover:bg-green-700" loading={pending.isPending(`ta-${app.id}`)} disabled={pending.isPending(`tr-${app.id}`)} onClick={() => pending.run(`ta-${app.id}`, () => handleApproveTrainer(app))}>
+                            {!pending.isPending(`ta-${app.id}`) && <Check className="h-4 w-4" />}
                           </Button>
 
-                          <Button size="sm" variant="destructive" onClick={() => handleRejectTrainer(app)}>
-                            <X className="h-4 w-4" />
+                          <Button size="sm" variant="destructive" loading={pending.isPending(`tr-${app.id}`)} disabled={pending.isPending(`ta-${app.id}`)} onClick={() => pending.run(`tr-${app.id}`, () => handleRejectTrainer(app))}>
+                            {!pending.isPending(`tr-${app.id}`) && <X className="h-4 w-4" />}
                           </Button>
                         </>
                       )}
@@ -261,7 +272,8 @@ export default function ViewNotifications() {
                 ))}
               </TableBody>
             </Table>
-            {trainerApplications.length === 0 && <p className="text-center py-4 text-muted-foreground">No trainer applications found.</p>}
+            {trainersLoading && trainerApplications.length === 0 && <TableSkeleton rows={3} className="py-4" />}
+            {!trainersLoading && trainerApplications.length === 0 && <p className="text-center py-4 text-muted-foreground">No trainer applications found.</p>}
           </CardContent>
         </Card>
       </div>
@@ -306,11 +318,11 @@ export default function ViewNotifications() {
                       </Dialog>
                       {app.status === 'pending' && (
                         <>
-                          <Button size="sm" variant="default" className="bg-green-600 hover:bg-green-700" onClick={() => handleApproveMember(app)}>
-                            <Check className="h-4 w-4" />
+                          <Button size="sm" variant="default" className="bg-green-600 hover:bg-green-700" loading={pending.isPending(`ma-${app.bookingId}`)} disabled={pending.isPending(`mr-${app.bookingId}`)} onClick={() => pending.run(`ma-${app.bookingId}`, () => handleApproveMember(app))}>
+                            {!pending.isPending(`ma-${app.bookingId}`) && <Check className="h-4 w-4" />}
                           </Button>
-                          <Button size="sm" variant="destructive" onClick={() => handleRejectMember(app)}>
-                            <X className="h-4 w-4" />
+                          <Button size="sm" variant="destructive" loading={pending.isPending(`mr-${app.bookingId}`)} disabled={pending.isPending(`ma-${app.bookingId}`)} onClick={() => pending.run(`mr-${app.bookingId}`, () => handleRejectMember(app))}>
+                            {!pending.isPending(`mr-${app.bookingId}`) && <X className="h-4 w-4" />}
                           </Button>
                         </>
                       )}
@@ -319,7 +331,8 @@ export default function ViewNotifications() {
                 ))}
               </TableBody>
             </Table>
-            {memberApplications.length === 0 && <p className="text-center py-4 text-muted-foreground">No member applications found.</p>}
+            {membersLoading && memberApplications.length === 0 && <TableSkeleton rows={3} className="py-4" />}
+            {!membersLoading && memberApplications.length === 0 && <p className="text-center py-4 text-muted-foreground">No member applications found.</p>}
           </CardContent>
         </Card>
       </div>

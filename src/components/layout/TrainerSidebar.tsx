@@ -7,6 +7,7 @@ import {
   UserCheck,
   Bell,
   LogOut,
+  TrendingDown,
   User,
   Home // ✅ Added Home icon for dashboard
 } from "lucide-react";
@@ -32,6 +33,7 @@ const trainerMenuItems = [
   { title: "Update Profile", url: "/trainer/update-profile", icon: User },
   { title: "View Attendance", url: "/trainer/attendance", icon: UserCheck },
   { title: "View Members", url: "/trainer/members", icon: Users },
+  { title: "Members at Risk", url: "/trainer/members-at-risk", icon: TrendingDown },
   { title: "View Equipment", url: "/trainer/equipment", icon: Dumbbell },
   { title: "View Packages", url: "/trainer/packages", icon: Package },
   { title: "Message", url: "/trainer/chat", icon: MessageCircle },

@@ -9,6 +9,10 @@ import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { authService } from '@/services/authService';
 import { bookPackageService } from "@/services/bookPackageService";
+import { RecommendedPackages } from '@/components/analytics/RecommendedPackages';
+import { CardGridSkeleton } from '@/components/ui/loading';
+import { usePagedPackages } from '@/hooks/use-paged-packages';
+import { Pager } from '@/components/ui/pager';
 
 // Define the type for the booking details based on your backend DTO
 interface BookPackageDetailResponseDto {
@@ -27,18 +31,20 @@ interface BookPackageDetailResponseDto {
 }
 
 export default function BookPackages() {
-  const { packages, setPackages, getAllGymPackages } = usePackages();
+  const personal = usePagedPackages('PERSONAL');
+  const group = usePagedPackages('GROUP');
   const { trainers, getAllTrainers } = useTrainers();
   const user = authService.getCurrentUser();
   const { toast } = useToast();
 
   // State to hold the user's current active or pending booking
   const [currentBooking, setCurrentBooking] = useState<BookPackageDetailResponseDto | null>(null);
+  // True until the packages, trainers and the member's own bookings have all loaded.
+  const [pageLoading, setPageLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
-      // 1. Fetch all available packages and trainers
-      await getAllGymPackages();
+      // 1. Trainers (the packages load page by page on their own)
       await getAllTrainers();
 
       if (user?.id) {
@@ -53,19 +59,6 @@ export default function BookPackages() {
           );
 
           setCurrentBooking(activeBooking || null);
-
-          // 4. If an active booking exists, sync the UI state for the packages list
-          if (activeBooking) {
-            setPackages(prevPackages =>
-              prevPackages.map(pkg =>
-                // Match the package from the main list with the user's active booking
-                pkg.name === activeBooking.gymPackageName
-                  ? { ...pkg, isBooked: true, bookingId: activeBooking.bookPackageId }
-                  // Ensure other packages are not marked as booked, and disable them
-                  : { ...pkg, isBooked: false, isDisabled: true }
-              )
-            );
-          }
         } catch (error) {
           console.error("Failed to fetch user bookings:", error);
           toast({
@@ -77,7 +70,7 @@ export default function BookPackages() {
       }
     };
 
-    fetchData();
+    fetchData().finally(() => setPageLoading(false));
   }, [user?.id]); // Rerun effect if the user ID changes
 
   const handleBookPackage = async (packageId: number) => {
@@ -92,15 +85,6 @@ export default function BookPackages() {
       const newBooking = response.data?.BookPackage;
 
       if (newBooking) {
-        // Update the UI immediately
-        setPackages(
-          packages.map(pkg =>
-            pkg.id === packageId
-              ? { ...pkg, isBooked: true, bookingId: newBooking.bookingPackageID }
-              : { ...pkg, isBooked: false, isDisabled: true } // Disable other packages
-          )
-        );
-
         // Also update the status banner
         setCurrentBooking({
           bookPackageId: newBooking.bookingPackageID,
@@ -114,7 +98,7 @@ export default function BookPackages() {
         title: "Package Booked",
         description: `You have successfully booked the ${newBooking?.gymPackageName || "selected"} package.`,
       });
-    } catch (err: any) {
+    } catch (err) {
       toast({
         title: "Booking Failed",
         description: err.message || "Unable to book package. You may already have an active booking.",
@@ -127,17 +111,13 @@ export default function BookPackages() {
     try {
       await bookPackageService.cancelGymPackage(bookingId);
 
-      // Reset the UI state to allow booking again
-      setPackages(
-        packages.map(pkg => ({ ...pkg, isBooked: false, bookingId: undefined, isDisabled: false }))
-      );
       setCurrentBooking(null);
 
       toast({
         title: "Package Cancelled",
         description: "You have successfully cancelled your package.",
       });
-    } catch (err: any) {
+    } catch (err) {
       toast({
         title: "Cancellation Failed",
         description: err.message || "Unable to cancel package. Please try again.",
@@ -146,15 +126,23 @@ export default function BookPackages() {
     }
   };
 
-  const personalPackages = packages.filter(p => p.gymPackageType === 'PERSONAL');
-  const groupPackages = packages.filter(p => p.gymPackageType === 'GROUP');
+  // Which package is booked / locked comes from the member's current booking, so it holds on every page.
+  const withBooking = (pkgs: Package[]) =>
+    pkgs.map(pkg => {
+      if (!currentBooking) return pkg;
+      return pkg.name === currentBooking.gymPackageName
+        ? { ...pkg, isBooked: true, bookingId: currentBooking.bookPackageId }
+        : { ...pkg, isBooked: false, isDisabled: true };
+    });
 
   return (
     <div className="space-y-6 p-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Book Packages</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Book Packages</h1>
         <p className="text-muted-foreground">Choose the perfect fitness package for your goals</p>
       </div>
+
+      <RecommendedPackages onBook={handleBookPackage} disabled={!!currentBooking} />
 
       {/* Active Booking Status Banner */}
       {currentBooking && (
@@ -183,8 +171,9 @@ export default function BookPackages() {
         </TabsList>
 
         <TabsContent value="personal">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {personalPackages.map(pkg => (
+          {pageLoading || (personal.loading && personal.items.length === 0) ? <CardGridSkeleton count={3} /> : (
+          <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 transition-opacity ${personal.loading ? "opacity-50 pointer-events-none" : ""}`}>
+            {withBooking(personal.items).map(pkg => (
               <PackageCard
                 key={pkg.id}
                 pkg={pkg}
@@ -196,11 +185,14 @@ export default function BookPackages() {
               />
             ))}
           </div>
+          )}
+        <Pager page={personal.page} totalPages={personal.totalPages} totalItems={personal.totalItems} pageSize={personal.pageSize} onPageChange={personal.setPage} disabled={personal.loading} noun="packages" />
         </TabsContent>
 
         <TabsContent value="group">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {groupPackages.map(pkg => (
+          {pageLoading || (group.loading && group.items.length === 0) ? <CardGridSkeleton count={3} /> : (
+          <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 transition-opacity ${group.loading ? "opacity-50 pointer-events-none" : ""}`}>
+            {withBooking(group.items).map(pkg => (
               <PackageCard
                 key={pkg.id}
                 pkg={pkg}
@@ -212,6 +204,8 @@ export default function BookPackages() {
               />
             ))}
           </div>
+          )}
+        <Pager page={group.page} totalPages={group.totalPages} totalItems={group.totalItems} pageSize={group.pageSize} onPageChange={group.setPage} disabled={group.loading} noun="packages" />
         </TabsContent>
       </Tabs>
     </div>
@@ -226,13 +220,23 @@ function PackageCard({
   // ✨ MODIFICATION: Add memberStatus to the props
   memberStatus
 }: {
-  pkg: Package & { bookingId?: number; isDisabled?: boolean };
+  pkg: Package & { bookingId?: number; isDisabled?: boolean; isBooked?: boolean; isPopular?: boolean };
   trainers: Trainer[];
-  onBook: (id: number) => void;
-  onCancel: (bookingId: number, packageId: number) => void;
+  onBook: (id: number) => void | Promise<void>;
+  onCancel: (bookingId: number, packageId: number) => void | Promise<void>;
   // ✨ MODIFICATION: Define the type for the new prop
   memberStatus?: 'PENDING' | 'ACTIVE' | 'CANCELLED' | 'COMPLETED';
 }) {
+  const [busy, setBusy] = useState<'book' | 'cancel' | null>(null);
+  const act = async (kind: 'book' | 'cancel', run: () => void | Promise<void>) => {
+    if (busy) return;
+    setBusy(kind);
+    try {
+      await run();
+    } finally {
+      setBusy(null);
+    }
+  };
   const trainer = trainers.find(t => t.id === pkg.trainerId);
 
   return (
@@ -284,7 +288,8 @@ function PackageCard({
                 variant="destructive"
                 size="sm"
                 className="w-full"
-                onClick={() => pkg.bookingId && onCancel(pkg.bookingId, pkg.id)}
+                loading={busy === 'cancel'}
+                onClick={() => pkg.bookingId && act('cancel', () => onCancel(pkg.bookingId!, pkg.id))}
                 // ✨ MODIFICATION: Disable button if status is ACTIVE
                 disabled={memberStatus === 'ACTIVE'}
               >
@@ -294,7 +299,8 @@ function PackageCard({
           ) : (
             <Button
               className="w-full"
-              onClick={() => onBook(pkg.id)}
+              loading={busy === 'book'}
+              onClick={() => act('book', () => onBook(pkg.id))}
               variant={pkg.isPopular ? "default" : "outline"}
               disabled={pkg.isDisabled}
             >

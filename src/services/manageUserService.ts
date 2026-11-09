@@ -47,7 +47,7 @@ export type ApiResponse = {
   success: number;
   code: number;
   message: string;
-  data?: any;
+  data?: unknown;
 };
 
 export const manageUserService = {
@@ -112,16 +112,6 @@ export const manageUserService = {
     }
   },
 
-  // Accept booking package
-  acceptBooking: async (bookingId: number) => {
-    try {
-      const response = await api.post(`${userUrl}/${bookingId}`);
-      return response.data;
-    } catch (error) {
-      console.error(`Error accepting booking ${bookingId}:`, error);
-      throw error.response?.data || { message: 'Failed to accept booking' };
-    }
-  },
 
   // Get all bookings with filters
   getAllBookings: async (

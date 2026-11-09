@@ -21,8 +21,6 @@ export default function MemberProfileSetup() {
 
   const { userId, email, role, password } = location.state || {};
 
-  console.log("Received userId:", userId);
-  console.log("Received email:", email);
 
   // Redirect to login if userId or email is missing
   useEffect(() => {

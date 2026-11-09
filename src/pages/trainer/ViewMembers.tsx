@@ -1,13 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, User, Activity, Star, CreditCard, Phone, Calendar, Users } from "lucide-react";
+import { Search, User, Activity, Star, CreditCard, Phone, Calendar, Users, MessageCircle } from "lucide-react";
 import { manageUserService, BackendUser } from "@/services/manageUserService";
 import { authService } from "@/services/authService";
 import Cookies from "js-cookie";
+import { CardGridSkeleton } from '@/components/ui/loading';
+import { initials, displayName, matches } from '@/lib/text';
+import { imageFetchInit } from '@/lib/imageAuth';
 
 interface MemberHealth {
   id: number;
@@ -38,6 +43,7 @@ const getBMIStatus = (bmi: number) => {
 };
 
 export default function ViewMembers() {
+  const navigate = useNavigate();
   const [members, setMembers] = useState<MemberHealth[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
@@ -52,7 +58,6 @@ export default function ViewMembers() {
         const response = await manageUserService.getBookedUsersByTrainer(trainerId || 0, 0, 20);
         const data: BackendUser[] = response.data;
 
-        console.log("Fetched members:", data);
 
         // Map backend data to MemberHealth type
         const mappedMembers: MemberHealth[] = data.map((user) => ({
@@ -70,7 +75,6 @@ export default function ViewMembers() {
           lastVisit: "",
         }));
 
-        console.log("Mapped members:", mappedMembers);
 
         setMembers(mappedMembers);
       } catch (error) {
@@ -91,9 +95,7 @@ export default function ViewMembers() {
       for (const member of members) {
         if (member.profilePic) {
           try {
-            const res = await fetch(member.profilePic, {
-              headers: { Authorization: `Bearer ${token}` },
-            });
+            const res = await fetch(member.profilePic, imageFetchInit(member.profilePic, token));
             if (res.ok) {
               const blob = await res.blob();
               newImages[member.id] = URL.createObjectURL(blob);
@@ -111,8 +113,8 @@ export default function ViewMembers() {
 
 
   const filteredMembers = members.filter((member) =>
-    member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    member.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    matches(member.name, searchTerm) ||
+    matches(member.email, searchTerm) ||
     member.nrc?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     member.phone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     member.dob?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -122,7 +124,7 @@ export default function ViewMembers() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-foreground">My Members</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">My Members</h1>
         <p className="text-muted-foreground">View health information of your assigned members</p>
       </div>
 
@@ -138,9 +140,8 @@ export default function ViewMembers() {
       </div>
 
       {/* Members List */}
-      {/* Members List */}
       {loading ? (
-        <p className="text-muted-foreground">Loading members...</p>
+        <CardGridSkeleton count={4} className="lg:grid-cols-2" />
       ) : filteredMembers.length === 0 ? (
         <p className="text-muted-foreground text-center">No members found who are booked gym packages you have assigned.</p>
       ) : (
@@ -152,16 +153,16 @@ export default function ViewMembers() {
             return (
               <Card key={member.id}>
                 <CardHeader>
-                  <div className="flex justify-between items-start space-x-4">
+                  <div className="flex flex-wrap items-start gap-3">
                     <img
                       src={images[member.id] || `https://ui-avatars.com/api/?name=${member.name}`}
                       alt={member.name}
-                      className="w-16 h-16 rounded-full object-cover"
+                      className="w-16 h-16 shrink-0 rounded-full object-cover"
                     />
 
-                    <div className="flex-1">
-                      <CardTitle>{member.name}</CardTitle>
-                      <CardDescription>{member.email}</CardDescription>
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="break-words">{member.name}</CardTitle>
+                      <CardDescription className="break-all">{member.email}</CardDescription>
                     </div>
                     <Badge variant={bmiStatus.variant}>
                       BMI: {bmi} ({bmiStatus.label})
@@ -219,6 +220,17 @@ export default function ViewMembers() {
                     <Badge variant="outline">
                       {member.goal || "No specific goal"}
                     </Badge>
+                  </div>
+
+                  <div className="pt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigate(`/trainer/chat?userId=${member.id}`)}
+                    >
+                      <MessageCircle className="h-4 w-4 mr-2" />
+                      Message {member.name}
+                    </Button>
                   </div>
                 </CardContent>
               </Card>

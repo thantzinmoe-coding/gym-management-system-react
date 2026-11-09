@@ -32,10 +32,22 @@ export default function Login() {
     try {
       const response = await authService.login(email, password);
 
+      if (response?.success && response.data?.profileComplete === false) {
+        // Verified the e-mail earlier but never finished the profile: continue where they stopped.
+        const pendingRole = String(response.data.roleName || '').toLowerCase();
+        toast({
+          title: "Finish setting up your profile",
+          description: "Your email is verified. Please complete your profile to continue.",
+        });
+        navigate(`/setup/${pendingRole}-profile`, {
+          state: { userId: response.data.userId, email: response.data.email, role: response.data.roleName, password },
+        });
+        return;
+      }
+
       if (response?.success) {
         const authUser = authService.getCurrentUser();
         if (authUser && authUser.role) {
-          console.log(authUser.role);
           setRole(authUser.role);
           toast({
             title: "Login successful",
@@ -116,6 +128,7 @@ export default function Login() {
           </form>
 
           <div className="mt-4 text-center text-sm text-muted-foreground">
+            <p><a href="/forgot-password" className="text-primary hover:underline">Forgot password?</a></p>
             <p>Don't have an account? <a href="/register" className="text-primary hover:underline">Register</a></p>
           </div>
         </CardContent>

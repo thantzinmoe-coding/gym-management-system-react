@@ -7,6 +7,7 @@ import { useTrainers } from "@/context/TrainerContext";
 import { authService } from "@/services/authService";
 import { bookPackageService } from "@/services/bookPackageService";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface BookPackageDetailResponseDto {
   bookPackageId: number;
@@ -31,6 +32,7 @@ export default function MemberDashboard() {
 
   // Booking state
   const [currentBooking, setCurrentBooking] = useState<BookPackageDetailResponseDto | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
 
   // BMI state
   const [bmiEntries, setBmiEntries] = useState<{ date: string; bmi: number }[]>([]);
@@ -56,13 +58,21 @@ export default function MemberDashboard() {
         }
       }
     };
-    fetchData();
+    fetchData().finally(() => setStatsLoading(false));
   }, [user?.id]);
 
   // Load BMI data
   useEffect(() => {
     const storedBmi = localStorage.getItem("member_bmi_entries");
-    if (storedBmi) setBmiEntries(JSON.parse(storedBmi));
+    if (storedBmi) {
+      // Browser storage can hold anything (old versions, manual edits): accept only a list.
+      try {
+        const parsed = JSON.parse(storedBmi);
+        if (Array.isArray(parsed)) setBmiEntries(parsed);
+      } catch {
+        /* ignore unreadable saved data */
+      }
+    }
   }, []);
 
   // Save BMI data
@@ -115,7 +125,7 @@ export default function MemberDashboard() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Member Dashboard</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Member Dashboard</h1>
         <p className="text-muted-foreground">Track your BMI and membership progress</p>
       </div>
 
@@ -128,9 +138,11 @@ export default function MemberDashboard() {
               <stat.icon className={`h-5 w-5 ${stat.color}`} />
             </CardHeader>
             <CardContent>
+              {statsLoading ? <Skeleton className="h-8 w-32" /> : (
               <div className="text-2xl font-bold">
                 {stat.value}
               </div>
+              )}
             </CardContent>
           </Card>
         ))}

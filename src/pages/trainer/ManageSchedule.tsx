@@ -121,9 +121,9 @@ export default function ManageSchedule() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Manage Schedule</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Manage Schedule</h1>
           <p className="text-muted-foreground">Organize your training sessions and appointments</p>
         </div>
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
@@ -179,7 +179,7 @@ export default function ManageSchedule() {
                   onChange={(e) => setNewSchedule({...newSchedule, date: e.target.value})}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="startTime">Start Time</Label>
                   <Input
@@ -267,8 +267,8 @@ export default function ManageSchedule() {
                   </p>
                 ) : (
                   filteredSchedules.map((schedule) => (
-                    <div key={schedule.id} className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-                      <div className="flex items-center space-x-4">
+                    <div key={schedule.id} className="flex flex-col gap-3 p-3 sm:p-4 bg-muted/50 rounded-lg sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex items-center gap-4">
                         <div className="text-center">
                           <p className="text-sm font-medium">{schedule.startTime}</p>
                           <p className="text-xs text-muted-foreground">to</p>
@@ -280,7 +280,7 @@ export default function ManageSchedule() {
                           <Badge variant="outline" className="mt-1">{schedule.type}</Badge>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center gap-2">
                         {getStatusBadge(schedule.status)}
                         <Button variant="outline" size="sm">
                           <Edit className="h-4 w-4" />

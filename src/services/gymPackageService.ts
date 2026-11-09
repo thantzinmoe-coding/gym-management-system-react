@@ -5,11 +5,11 @@ const gymPackageUrl = '/api/v1/gym-package';
 
 export const gymPackageService = {
     // Create a new gym package
-    createGymPackage: async (gymPackageData: any) => {
+    createGymPackage: async (gymPackageData: object) => {
         try {
             const response = await api.post(`${gymPackageUrl}`, gymPackageData);
             return response.data;
-        } catch (error: any) {
+        } catch (error) {
             console.error('Error creating gym package:', error);
             throw error.response?.data || { message: 'Failed to create gym package' };
         }
@@ -20,7 +20,7 @@ export const gymPackageService = {
         try {
             const response = await api.get(`${gymPackageUrl}/${id}`);
             return response.data;
-        } catch (error: any) {
+        } catch (error) {
             console.error(`Error fetching gym package with id ${id}:`, error);
             throw error.response?.data || { message: 'Failed to fetch gym package' };
         }
@@ -31,7 +31,7 @@ export const gymPackageService = {
         try {
             const response = await api.get(`${gymPackageUrl}?page=${page}&size=${size}`);
             return response.data;
-        } catch (error: any) {
+        } catch (error) {
             console.error('Error fetching gym packages:', error);
             throw error.response?.data || { message: 'Failed to fetch gym packages' };
         }
@@ -42,18 +42,18 @@ export const gymPackageService = {
         try {
             const response = await api.get(`${gymPackageUrl}/${type}/get-by-type?page=${page}&size=${size}`);
             return response.data;
-        } catch (error: any) {
+        } catch (error) {
             console.error(`Error fetching gym packages by type ${type}:`, error);
             throw error.response?.data || { message: 'Failed to fetch gym packages by type' };
         }
     },
 
     // Update gym package
-    updateGymPackage: async (id: number, gymPackageData: any) => {
+    updateGymPackage: async (id: number, gymPackageData: object) => {
         try {
             const response = await api.put(`${gymPackageUrl}/${id}`, gymPackageData);
             return response.data;
-        } catch (error: any) {
+        } catch (error) {
             console.error(`Error updating gym package with id ${id}:`, error);
             throw error.response?.data || { message: 'Failed to update gym package' };
         }
@@ -64,7 +64,7 @@ export const gymPackageService = {
         try {
             const response = await api.delete(`${gymPackageUrl}/${id}`);
             return response.data;
-        } catch (error: any) {
+        } catch (error) {
             console.error(`Error deleting gym package with id ${id}:`, error);
             throw error.response?.data || { message: 'Failed to delete gym package' };
         }

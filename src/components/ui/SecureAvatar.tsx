@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import Cookies from 'js-cookie';
+import { imageFetchInit } from '@/lib/imageAuth';
 
 export function useSecureAvatar(url: string | null | undefined) {
   const [avatar, setAvatar] = useState<string>("");
@@ -11,9 +12,7 @@ export function useSecureAvatar(url: string | null | undefined) {
     const fetchAvatar = async () => {
       try {
         const token = Cookies.get('token');
-        const response = await fetch(url, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const response = await fetch(url, imageFetchInit(url, token));
 
         if (!response.ok) throw new Error("Failed to fetch avatar");
 

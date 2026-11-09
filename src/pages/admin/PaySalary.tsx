@@ -25,22 +25,41 @@ import {
   History, // NEW: Using History icon for the button
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useTrainers } from "@/context/TrainerContext";
+import { useTrainers, type Trainer } from "@/context/TrainerContext";
 import { salaryService } from "@/services/salaryService";
 import Cookies from "js-cookie";
+import { ListSkeleton } from '@/components/ui/loading';
+import { initials, displayName, matches } from '@/lib/text';
+import { usePending } from '@/hooks/use-pending';
+import { imageFetchInit } from '@/lib/imageAuth';
+
+// A salary record as returned by the backend.
+interface SalaryRecord {
+  id: number;
+  trainerId: number | string;
+  amount: number;
+  status: string;
+  salaryMonth?: number;
+  salaryYear?: number;
+  paymentDate?: string;
+  notes?: string;
+}
+
+// Trainers listed on this page; `role` picks the hourly rate.
+type SalaryTrainer = Trainer & { role?: string };
 
 export default function PaySalary() {
   const { toast } = useToast();
-  const { trainers, getAllTrainers, getActiveTrainers } = useTrainers();
+  const { trainers, loading: trainersLoading, getAllTrainers, getActiveTrainers } = useTrainers();
   const [searchTerm, setSearchTerm] = useState("");
   const [isPayDialogOpen, setIsPayDialogOpen] = useState(false);
   const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false); // NEW state for history dialog
-  const [selectedTrainer, setSelectedTrainer] = useState<any>(null);
+  const [selectedTrainer, setSelectedTrainer] = useState<SalaryTrainer | null>(null);
   const [totalHours, setTotalHours] = useState<Record<string, number>>({});
   // NEW: Store all salary records from the API in a single array
-  const [allSalaries, setAllSalaries] = useState<any[]>([]);
+  const [allSalaries, setAllSalaries] = useState<SalaryRecord[]>([]);
   // NEW: State to hold the history for the selected trainer
-  const [trainerPaymentHistory, setTrainerPaymentHistory] = useState<any[]>([]);
+  const [trainerPaymentHistory, setTrainerPaymentHistory] = useState<SalaryRecord[]>([]);
 
   const [avatarUrls, setAvatarUrls] = useState<Record<number, string>>({});
 
@@ -76,11 +95,7 @@ export default function PaySalary() {
         trainers.map(async (trainer) => {
           if (trainer.avatarUrl && !avatarUrls[trainer.id]) {
             try {
-              const response = await fetch(trainer.avatarUrl, {
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                },
-              });
+              const response = await fetch(trainer.avatarUrl, imageFetchInit(trainer.avatarUrl, token));
               if (response.ok) {
                 const blob = await response.blob();
                 newAvatars[trainer.id] = URL.createObjectURL(blob);
@@ -136,13 +151,15 @@ export default function PaySalary() {
     });
   }, [trainers]);
 
-  const calculateSalary = (trainer: any) => {
+  const calculateSalary = (trainer: SalaryTrainer) => {
     const hoursWorked = totalHours[trainer.id] || 0;
     const rate = hourlyRates[trainer.role] || hourlyRates["Trainer"];
     return hoursWorked * rate;
   };
 
   // MODIFIED: Handle payment by UPDATING the existing pending record
+  const pending = usePending();
+
   const handlePaySalary = async () => {
     if (!selectedTrainer) return;
 
@@ -180,7 +197,7 @@ export default function PaySalary() {
 
       setIsPayDialogOpen(false);
       setSelectedTrainer(null);
-    } catch (err: any) {
+    } catch (err) {
       console.error(`Error paying salary for ${selectedTrainer.name}:`, err);
       toast({ title: "Error", description: err.message || "Failed to pay salary", variant: "destructive" });
     }
@@ -212,7 +229,7 @@ export default function PaySalary() {
   };
 
   // NEW HELPER: Open the history dialog for a trainer
-  const openHistoryDialog = (trainer: any) => {
+  const openHistoryDialog = (trainer: SalaryTrainer) => {
     const history = allSalaries
       .filter(s => s.trainerId.toString() === trainer.id.toString() && s.status === "PAID")
       .sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime());
@@ -222,14 +239,11 @@ export default function PaySalary() {
   };
 
   const filteredTrainers = trainers.filter(trainer =>
-    trainer.name.toLowerCase().includes(searchTerm.toLowerCase())
+    matches(trainer.name, searchTerm)
   );
 
   useEffect(() => {
     const date = new Date();
-    console.log(date);
-    console.log(date.getDate());
-    console.log(date.getMonth() + 1)
   }, [trainers])
 
   return (
@@ -254,6 +268,7 @@ export default function PaySalary() {
           </div>
         </CardHeader>
         <CardContent>
+          {trainersLoading && trainers.length === 0 ? <ListSkeleton rows={6} /> : (
           <div className="space-y-4">
             {filteredTrainers.map((trainer) => {
               const hoursWorked = totalHours[trainer.id] || 0;
@@ -275,11 +290,11 @@ export default function PaySalary() {
                       />
                     ) : (
                       <div className="h-12 w-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-lg font-medium">
-                        {trainer.name.split(" ").map((n: string) => n[0]).join("")}
+                        {initials(trainer.name)}
                       </div>
                     )}
                     <div>
-                      <p className="font-medium text-foreground">{trainer.name}</p>
+                      <p className="font-medium text-foreground">{displayName(trainer.name, 'Profile not completed')}</p>
                       <p className="text-xs text-muted-foreground">
                         {trainer.email || "No email"}
                       </p>
@@ -328,7 +343,7 @@ export default function PaySalary() {
                           {selectedTrainer && (
                             <div className="space-y-4">
                               <p>You are about to pay <strong>${calculateSalary(selectedTrainer).toLocaleString()}</strong> to <strong>{selectedTrainer.name}</strong>.</p>
-                              <Button onClick={handlePaySalary} className="w-full">
+                              <Button onClick={() => pending.run('pay', handlePaySalary)} loading={pending.isPending('pay')} className="w-full">
                                 Confirm Payment
                               </Button>
                             </div>
@@ -345,6 +360,7 @@ export default function PaySalary() {
               );
             })}
           </div>
+          )}
         </CardContent>
       </Card>
 

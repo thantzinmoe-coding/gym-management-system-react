@@ -1,28 +1,24 @@
 // src/pages/ViewTrainers.tsx (Updated content)
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "lucide-react";
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Search, Star, Mail, Phone } from 'lucide-react';
+import { Search, Star, MessageCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 // Import TrainerResponseDto and the new method
 import { trainerService, TrainerResponseDto } from '@/services/trainerService';
 import { Mail as MailIcon, Phone as PhoneIcon } from 'lucide-react';
 import Cookies from 'js-cookie';
+import { CardGridSkeleton } from '@/components/ui/loading';
+import { initials, displayName, matches } from '@/lib/text';
+import { imageFetchInit } from '@/lib/imageAuth';
 
 // Define an interface for the trainer data we'll display, including rating
 // This extends the existing TrainerResponseDto to add rating information
@@ -39,10 +35,12 @@ interface AverageRatingResponse {
 
 
 export default function ViewTrainers() {
+  const navigate = useNavigate();
   const [trainers, setTrainers] = useState<DisplayTrainer[]>([]); // Use the new interface
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
   const [trainerImages, setTrainerImages] = useState<Record<number, string>>({});
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchTrainerImages = async () => {
@@ -53,9 +51,7 @@ export default function ViewTrainers() {
       for (const trainer of trainers) {
         if (trainer.avatarUrl) {
           try {
-            const res = await fetch(trainer.avatarUrl, {
-              headers: { Authorization: `Bearer ${token}` },
-            });
+            const res = await fetch(trainer.avatarUrl, imageFetchInit(trainer.avatarUrl, token));
             if (res.ok) {
               const blob = await res.blob();
               newImages[trainer.id] = URL.createObjectURL(blob);
@@ -124,6 +120,8 @@ export default function ViewTrainers() {
           description: "Failed to connect to the server.",
           variant: "destructive",
         });
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -131,7 +129,7 @@ export default function ViewTrainers() {
   }, [toast]); // toast is a dependency for the hook
 
   const filteredTrainers = trainers.filter((trainer) =>
-    trainer.name.toLowerCase().includes(searchTerm.toLowerCase())
+    matches(trainer.name, searchTerm)
   );
 
   const getAvailabilityBadge = (availability: string) => {
@@ -173,7 +171,7 @@ export default function ViewTrainers() {
       )}
       {/* If count is 0, undefined, or not relevant, show the average rating value */}
       {(count === undefined || count === 0) && (
-        <span className="text-sm text-muted-foreground ml-1">{rating.toFixed(1)}</span>
+        <span className="text-sm text-muted-foreground ml-1">{Number(rating || 0).toFixed(1)}</span>
       )}
     </div>
   );
@@ -181,7 +179,7 @@ export default function ViewTrainers() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Our Trainers</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Our Trainers</h1>
         <p className="text-muted-foreground">
           Meet our certified fitness professionals
         </p>
@@ -197,30 +195,28 @@ export default function ViewTrainers() {
         />
       </div>
 
+      {loading ? <CardGridSkeleton count={4} className="lg:grid-cols-2" /> : (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {filteredTrainers.map((trainer) => (
           <Card key={trainer.id}>
             <CardHeader>
-              <div className="flex justify-between items-start">
-                <div className="flex items-center space-x-4">
+              <div className="flex flex-wrap justify-between items-start gap-3">
+                <div className="flex items-center gap-4 min-w-0">
                   {trainerImages[trainer.id] ? (
                     <img
                       src={trainerImages[trainer.id]}
                       alt={trainer.name}
-                      className="w-16 h-16 rounded-full object-cover"
+                      className="w-16 h-16 shrink-0 rounded-full object-cover"
                     />
                   ) : (
-                    <div className="w-16 h-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xl font-bold">
-                      {trainer.name
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")}
+                    <div className="w-16 h-16 shrink-0 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xl font-bold">
+                      {initials(trainer.name)}
                     </div>
                   )}
 
-                  <div>
-                    <CardTitle>{trainer.name}</CardTitle>
-                    <div className="flex items-center space-x-4 text-sm text-muted-foreground mt-1">
+                  <div className="min-w-0">
+                    <CardTitle>{displayName(trainer.name, 'Trainer')}</CardTitle>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 text-sm text-muted-foreground mt-1 break-all">
                       <div className="flex items-center">
                         <MailIcon className="h-3 w-3 mr-1" />
                         {trainer.email}
@@ -239,21 +235,15 @@ export default function ViewTrainers() {
               </div>
             </CardHeader>
             <CardContent className="pt-2">
-              <Dialog>
-                <DialogTrigger asChild>
-
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Book Session with {trainer.name}</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <p className="text-sm text-muted-foreground">
-                      This feature is coming soon!
-                    </p>
-                  </div>
-                </DialogContent>
-              </Dialog>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate(`/member/chat?userId=${trainer.id}`)}
+                className="w-full sm:w-auto"
+              >
+                <MessageCircle className="h-4 w-4 mr-2" />
+                Chat with {trainer.name}
+              </Button>
             </CardContent>
           </Card>
         ))}
@@ -264,7 +254,7 @@ export default function ViewTrainers() {
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }
-

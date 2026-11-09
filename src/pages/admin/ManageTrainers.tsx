@@ -27,6 +27,11 @@ import { useToast } from '@/hooks/use-toast';
 import { trainerService } from '@/services/trainerService';
 import Cookies from 'js-cookie';
 import { manageUserService } from '@/services/manageUserService';
+import { ListSkeleton } from '@/components/ui/loading';
+import { Skeleton } from '@/components/ui/skeleton';
+import { initials, displayName, matches } from '@/lib/text';
+import { usePending } from '@/hooks/use-pending';
+import { imageFetchInit } from '@/lib/imageAuth';
 
 interface TrainerResponseDto {
   id: number;
@@ -41,6 +46,7 @@ interface TrainerResponseDto {
 
 export default function ManageTrainers() {
   const [trainers, setTrainers] = useState<TrainerResponseDto[]>([]);
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingTrainer, setEditingTrainer] = useState<TrainerResponseDto | null>(null);
@@ -65,6 +71,8 @@ export default function ManageTrainers() {
         description: "Failed to connect to the server.",
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
   };
   useEffect(() => {
@@ -83,11 +91,7 @@ export default function ManageTrainers() {
           // Only fetch if avatarUrl exists and is not already a blob URL
           if (trainer.avatarUrl && !trainer.avatarUrl.startsWith('blob:')) {
             try {
-              const response = await fetch(trainer.avatarUrl, {
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                },
-              });
+              const response = await fetch(trainer.avatarUrl, imageFetchInit(trainer.avatarUrl, token));
               if (response.ok) {
                 const blob = await response.blob();
                 newAvatars[trainer.id] = URL.createObjectURL(blob);
@@ -121,6 +125,8 @@ export default function ManageTrainers() {
   };
 
   // Update trainer status
+  const pending = usePending();
+
   const handleUpdateTrainer = async () => {
     if (editingTrainer) {
       try {
@@ -151,7 +157,9 @@ export default function ManageTrainers() {
     }
   };
 
-  const handleDeleteTrainer = async (userId: number, userName: string) => {
+  const handleDeleteTrainer = async (userId: number, userName?: string) => {
+    // Deleting a trainer cannot be undone: ask first.
+    if (!window.confirm(`Delete trainer${userName ? ` ${userName}` : ''}? This cannot be undone.`)) return;
     try {
       await manageUserService.deleteUser(userId);
       toast({
@@ -160,7 +168,7 @@ export default function ManageTrainers() {
       });
       // Reload data after deletion to reflect changes
       fetchTrainers();
-    } catch (error: any) {
+    } catch (error) {
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -180,21 +188,21 @@ export default function ManageTrainers() {
   };
 
   return (
-    <div className="space-y-6 p-6 bg-gray-50 min-h-screen">
+    <div className="space-y-6 p-3 sm:p-6 bg-gray-50 min-h-screen">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Manage Trainers</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Manage Trainers</h1>
         <p className="text-gray-600">Edit trainer status and view profile details</p>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
         <Card className="bg-white shadow rounded-lg text-black">
           <CardHeader>
             <CardTitle>Total Trainers</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-black">{trainers.length}</p>
+            {loading && trainers.length === 0 ? <Skeleton className="h-9 w-12" /> : <p className="text-3xl font-bold text-black">{trainers.length}</p>}
           </CardContent>
         </Card>
 
@@ -203,7 +211,7 @@ export default function ManageTrainers() {
             <CardTitle>Active Trainers</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-black">{trainers.filter(t => t.status === 'ACTIVE').length}</p>
+            {loading && trainers.length === 0 ? <Skeleton className="h-9 w-12" /> : <p className="text-3xl font-bold text-black">{trainers.filter(t => t.status === 'ACTIVE').length}</p>}
           </CardContent>
         </Card>
       </div>
@@ -217,23 +225,24 @@ export default function ManageTrainers() {
           </div>
         </CardHeader>
         <CardContent>
+          {loading && trainers.length === 0 ? <ListSkeleton rows={6} /> : (
           <div className="space-y-4">
             {trainers.map(trainer => (
-              <div key={trainer.id} className="flex items-center justify-between p-4 bg-white rounded-lg shadow">
+              <div key={trainer.id} className="flex flex-col gap-3 p-3 sm:p-4 bg-white rounded-lg shadow sm:flex-row sm:items-center sm:justify-between">
                 {/* Trainer Info */}
-                <div className="flex items-center space-x-4">
-                  <Avatar className="h-12 w-12">
+                <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                  <Avatar className="h-12 w-12 shrink-0">
                     <AvatarImage src={trainer.avatarUrl || "/placeholder-avatar.jpg"} />
-                    <AvatarFallback className="text-lg">{trainer.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                    <AvatarFallback className="text-lg">{initials(trainer.name)}</AvatarFallback>
                   </Avatar>
-                  <div>
-                    <p className="font-medium text-gray-900">{trainer.name}</p>
-                    <div className="flex space-x-4 text-sm text-gray-500 mt-1">
+                  <div className="min-w-0">
+                    <p className="font-medium text-gray-900">{displayName(trainer.name, 'Profile not completed')}</p>
+                    <div className="flex flex-col sm:flex-row sm:space-x-4 text-sm text-gray-500 mt-1 break-all">
                       <p>Email: {trainer.email}</p>
                       <p>Phone: {trainer.phone}</p>
                     </div>
                     <Badge variant="outline">{trainer.experience} experience</Badge>
-                    <div className="flex space-x-2 mt-1">
+                    <div className="flex flex-wrap gap-1 mt-1">
                       {trainer.specialization?.map((spec: string, i: number) => (
                         <Badge key={i} variant="outline">{spec}</Badge>
                       ))}
@@ -242,7 +251,7 @@ export default function ManageTrainers() {
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center gap-2 shrink-0">
                   {getStatusBadge(trainer.status)}
                   <Button variant="outline" size="sm" onClick={() => handleEditTrainer(trainer)}>
                     <Edit className="h-4 w-4" />
@@ -250,9 +259,10 @@ export default function ManageTrainers() {
                   <Button
                     variant="destructive"
                     size="sm"
-                    onClick={() => handleDeleteTrainer(trainer.id)}
+                    loading={pending.isPending(trainer.id)}
+                    onClick={() => pending.run(trainer.id, () => handleDeleteTrainer(trainer.id, trainer.name))}
                   >
-                    🗑️
+                    {!pending.isPending(trainer.id) && '🗑️'}
                   </Button>
                 </div>
 
@@ -260,6 +270,7 @@ export default function ManageTrainers() {
             ))}
             {trainers.length === 0 && <p className="text-center text-gray-500 py-4">No trainers found.</p>}
           </div>
+          )}
         </CardContent >
       </Card >
 
@@ -281,7 +292,7 @@ export default function ManageTrainers() {
                   </SelectContent>
                 </Select>
               </div>
-              <Button className="w-full" onClick={handleUpdateTrainer}>Update Status</Button>
+              <Button className="w-full" loading={pending.isPending('update')} onClick={() => pending.run('update', handleUpdateTrainer)}>Update Status</Button>
             </div>
           )}
         </DialogContent>

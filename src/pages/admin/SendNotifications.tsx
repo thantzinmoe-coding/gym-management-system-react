@@ -10,6 +10,7 @@ import { Send, Bell, Clock, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNotifications } from "@/context/NotificationContext";
 import { notificationService } from "@/services/notificationService";
+import { usePending } from '@/hooks/use-pending';
 
 export default function SendNotifications() {
   const { toast } = useToast();
@@ -19,6 +20,8 @@ export default function SendNotifications() {
     title: string;
     message: string;
   }>({ title: "", message: "" });
+
+  const pending = usePending();
 
   const handleSendNotification = async () => {
     if (!notification.title || !notification.message) {
@@ -38,7 +41,7 @@ export default function SendNotifications() {
       });
 
       setNotification({ title: "", message: "" });
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: "Failed to Send",
         description: error.message || "Something went wrong",
@@ -50,7 +53,7 @@ export default function SendNotifications() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Send Notifications</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Send Notifications</h1>
         <p className="text-muted-foreground">Send notifications to members and trainers</p>
       </div>
 
@@ -87,8 +90,8 @@ export default function SendNotifications() {
             </div>
 
 
-            <Button onClick={handleSendNotification} className="w-full">
-              <Send className="h-4 w-4 mr-2" />
+            <Button onClick={() => pending.run('send', handleSendNotification)} loading={pending.isPending('send')} className="w-full">
+              {!pending.isPending('send') && <Send className="h-4 w-4 mr-2" />}
               Send Notification
             </Button>
           </CardContent>
