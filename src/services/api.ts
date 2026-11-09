@@ -31,8 +31,10 @@ const processQueue = (error: Error | null, token: string | null) => {
 
 // Public auth calls (sign in, register, OTP) must not carry a possibly expired token, and a
 // 401 from them means "wrong credentials", not "refresh the session".
+// The two profile-setup calls made right after sign-up are public too: the person has no session yet,
+// and a leftover token from an earlier login must not turn a failed save into a redirect to /login.
 const isPublicAuthCall = (url?: string) =>
-  !!url && /(auth\/users(\/(login|verifyEmail|verifyAccount|resendCode))?|forgotPassword(\/(verifyCode|reset))?)\/?$/.test(url.split('?')[0]);
+  !!url && /(auth\/users(\/(login|verifyEmail|verifyAccount|resendCode))?|forgotPassword(\/(verifyCode|reset))?|auth\/profile\/\d+\/create|auth\/user-detail-info\/\d+)\/?$/.test(url.split('?')[0]);
 
 // Add token to requests automatically
 api.interceptors.request.use(
