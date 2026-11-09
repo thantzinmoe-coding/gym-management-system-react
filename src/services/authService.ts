@@ -120,7 +120,19 @@ export const authService = {
   // Get current user
   getCurrentUser: () => {
     const user = localStorage.getItem('user');
-    return user ? JSON.parse(user) : null;
+    if (!user) return null;
+    // A saved user without any login token is a dead session (for example one left behind by an older
+    // version of the app): every request would be refused. Clear it so the person simply signs in again.
+    if (!Cookies.get('token') && !Cookies.get('refreshToken')) {
+      localStorage.removeItem('user');
+      return null;
+    }
+    try {
+      return JSON.parse(user);
+    } catch {
+      localStorage.removeItem('user');
+      return null;
+    }
   },
 
   // Check if user is authenticated
