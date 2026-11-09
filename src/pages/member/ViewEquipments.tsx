@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { useEquipments, Equipment } from "@/context/EquipmentContext";
 import Cookies from "js-cookie";
 import { CardGridSkeleton } from '@/components/ui/loading';
+import { imageFetchInit } from '@/lib/imageAuth';
 
 export default function ViewEquipments() {
     const { equipments } = useEquipments(); // Access equipments from the context
@@ -28,11 +29,7 @@ export default function ViewEquipments() {
             for (const eq of equipments) {
                 if (eq.imageUrl) {
                     try {
-                        const res = await fetch(eq.imageUrl, {
-                            headers: {
-                                Authorization: `Bearer ${token}`,
-                            },
-                        });
+                        const res = await fetch(eq.imageUrl, imageFetchInit(eq.imageUrl, token));
                         if (res.ok) {
                             const blob = await res.blob();
                             newImages[eq.id] = URL.createObjectURL(blob);

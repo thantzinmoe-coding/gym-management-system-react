@@ -14,6 +14,8 @@ import Cookies from 'js-cookie';
 import { TableSkeleton } from '@/components/ui/loading';
 import { Skeleton } from '@/components/ui/skeleton';
 import { initials, displayName, matches } from '@/lib/text';
+import { usePending } from '@/hooks/use-pending';
+import { imageFetchInit } from '@/lib/imageAuth';
 
 // Type definition for rows displayed in the table, including booking status and derived user status
 type UserRow = {
@@ -47,9 +49,7 @@ function useSecureAvatar(url: string | null) {
     const fetchAvatar = async () => {
       try {
         const token = Cookies.get('token');
-        const response = await fetch(url, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const response = await fetch(url, imageFetchInit(url, token));
 
         if (!response.ok) throw new Error("Failed to fetch avatar");
 
@@ -236,6 +236,8 @@ export default function ManageUser() {
 
 
   // Handler for deleting a user
+  const pending = usePending();
+
   const handleDeleteUser = async (userId: number, userName: string) => {
     try {
       await manageUserService.deleteUser(userId);
@@ -514,7 +516,8 @@ export default function ManageUser() {
                             <AlertDialogFooter>
                               <AlertDialogCancel>Cancel</AlertDialogCancel>
                               <AlertDialogAction
-                                onClick={() => handleDeleteUser(user.id, user.name)}
+                                disabled={pending.isPending(user.id)}
+                                onClick={() => pending.run(user.id, () => handleDeleteUser(user.id, user.name))}
                                 className="bg-red-600 hover:bg-red-700" // Red button for delete action
                               >
                                 Delete

@@ -11,6 +11,7 @@ import { useTrainers } from '@/context/TrainerContext';
 import { trainerService } from '@/services/trainerService';
 import { superAdminService } from '@/services/adminService';
 import { TableSkeleton } from '@/components/ui/loading';
+import { usePending } from '@/hooks/use-pending';
 
 export default function ViewNotifications() {
   const [trainerApplications, setTrainerApplications] = useState([]);
@@ -104,6 +105,8 @@ export default function ViewNotifications() {
   };
 
 
+  const pending = usePending();
+
   const acceptTrainerApplication = async (trainerId) => {
     try {
       await trainerService.acceptTrainerApplication(trainerId);
@@ -128,8 +131,7 @@ export default function ViewNotifications() {
       status: 'Active',
     });
 
-    acceptTrainerApplication(app.id);
-
+    return acceptTrainerApplication(app.id);
   };
 
   const rejectTrainer = async (trainerId) => {
@@ -166,15 +168,15 @@ export default function ViewNotifications() {
   };
 
   const handleApproveMember = (app) => {
-    approveMember(app.bookingId);
+    return approveMember(app.bookingId);
   };
 
   const handleRejectMember = (app) => {
-    rejectMember(app.bookingId, app.email, app.packageName, app.fullName);
+    return rejectMember(app.bookingId, app.email, app.packageName, app.fullName);
   };
 
   const handleRejectTrainer = (app) => {
-    rejectTrainer(app.id);
+    return rejectTrainer(app.id);
   };
 
   // --- Render Details ---
@@ -256,12 +258,12 @@ export default function ViewNotifications() {
                       </Dialog>
                       {app.status.toLowerCase() === 'pending' && (
                         <>
-                          <Button size="sm" variant="default" className="bg-green-600 hover:bg-green-700" onClick={() => handleApproveTrainer(app)}>
-                            <Check className="h-4 w-4" />
+                          <Button size="sm" variant="default" className="bg-green-600 hover:bg-green-700" loading={pending.isPending(`ta-${app.id}`)} disabled={pending.isPending(`tr-${app.id}`)} onClick={() => pending.run(`ta-${app.id}`, () => handleApproveTrainer(app))}>
+                            {!pending.isPending(`ta-${app.id}`) && <Check className="h-4 w-4" />}
                           </Button>
 
-                          <Button size="sm" variant="destructive" onClick={() => handleRejectTrainer(app)}>
-                            <X className="h-4 w-4" />
+                          <Button size="sm" variant="destructive" loading={pending.isPending(`tr-${app.id}`)} disabled={pending.isPending(`ta-${app.id}`)} onClick={() => pending.run(`tr-${app.id}`, () => handleRejectTrainer(app))}>
+                            {!pending.isPending(`tr-${app.id}`) && <X className="h-4 w-4" />}
                           </Button>
                         </>
                       )}
@@ -316,11 +318,11 @@ export default function ViewNotifications() {
                       </Dialog>
                       {app.status === 'pending' && (
                         <>
-                          <Button size="sm" variant="default" className="bg-green-600 hover:bg-green-700" onClick={() => handleApproveMember(app)}>
-                            <Check className="h-4 w-4" />
+                          <Button size="sm" variant="default" className="bg-green-600 hover:bg-green-700" loading={pending.isPending(`ma-${app.bookingId}`)} disabled={pending.isPending(`mr-${app.bookingId}`)} onClick={() => pending.run(`ma-${app.bookingId}`, () => handleApproveMember(app))}>
+                            {!pending.isPending(`ma-${app.bookingId}`) && <Check className="h-4 w-4" />}
                           </Button>
-                          <Button size="sm" variant="destructive" onClick={() => handleRejectMember(app)}>
-                            <X className="h-4 w-4" />
+                          <Button size="sm" variant="destructive" loading={pending.isPending(`mr-${app.bookingId}`)} disabled={pending.isPending(`ma-${app.bookingId}`)} onClick={() => pending.run(`mr-${app.bookingId}`, () => handleRejectMember(app))}>
+                            {!pending.isPending(`mr-${app.bookingId}`) && <X className="h-4 w-4" />}
                           </Button>
                         </>
                       )}

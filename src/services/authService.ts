@@ -89,7 +89,8 @@ export const authService = {
         password: password
       });
 
-      if (response) {
+      // E-mail verified but the profile setup was never finished: there is no token yet, nothing to store.
+      if (response && response.data?.data?.profileComplete !== false) {
         // The token lives only in the cookie; a second copy in localStorage was one more place to steal it from.
         localStorage.setItem('user', JSON.stringify({
           id: response.data.data?.userId,

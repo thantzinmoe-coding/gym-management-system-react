@@ -6,6 +6,9 @@ import { Trash2, Edit3, Calendar, Wrench } from "lucide-react";
 import { useEquipments, Equipment } from "@/context/EquipmentContext";
 import { parseISO, format } from 'date-fns'; // Import date-fns
 import Cookies from "js-cookie";
+import { imageFetchInit } from '@/lib/imageAuth';
+import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
 
 interface EquipmentCardProps {
   equipment: Equipment;
@@ -16,6 +19,8 @@ interface EquipmentCardProps {
 export const EquipmentCard = ({ equipment, onEdit }: EquipmentCardProps) => { // ADDED: onEdit to props
   const [imageError, setImageError] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [imageLoading, setImageLoading] = useState(!!equipment.imageUrl);
+  const [deleting, setDeleting] = useState(false);
   const { deleteEquipment, updateEquipment } = useEquipments();
 
   const getConditionVariant = (condition: string) => {
@@ -36,13 +41,10 @@ export const EquipmentCard = ({ equipment, onEdit }: EquipmentCardProps) => { //
   useEffect(() => {
     const loadImage = async () => {
       if (equipment.imageUrl) {
+        setImageLoading(true);
         try {
           const token = Cookies.get("token");
-          const response = await fetch(equipment.imageUrl, {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          });
+          const response = await fetch(equipment.imageUrl, imageFetchInit(equipment.imageUrl, token));
           if (response.ok) {
             const blob = await response.blob();
             setImageUrl(URL.createObjectURL(blob));
@@ -52,6 +54,8 @@ export const EquipmentCard = ({ equipment, onEdit }: EquipmentCardProps) => { //
         } catch (err) {
           console.error("Failed to load equipment image:", err);
           setImageError(true);
+        } finally {
+          setImageLoading(false);
         }
       }
     };
@@ -59,8 +63,15 @@ export const EquipmentCard = ({ equipment, onEdit }: EquipmentCardProps) => { //
     loadImage();
   }, [equipment.imageUrl]);
 
-  const handleDelete = (id: string) => {
-    deleteEquipment(id);
+  const handleDelete = async (id: string) => {
+    if (deleting) return;
+    setDeleting(true);
+    try {
+      await deleteEquipment(id);
+    } catch {
+      toast.error("Could not delete the equipment. Please try again.");
+      setDeleting(false);
+    }
   };
 
   const handleEdit = (equipment: Equipment) => {
@@ -68,7 +79,7 @@ export const EquipmentCard = ({ equipment, onEdit }: EquipmentCardProps) => { //
   };
 
   return (
-    <Card className="h-full w-full max-w-sm">
+    <Card className={`h-full w-full max-w-sm ${deleting ? "animate-pulse opacity-60 pointer-events-none" : ""}`}>
       <CardHeader className="pb-4">
         <div className="flex justify-between items-start">
           <CardTitle className="text-lg font-semibold truncate">
@@ -78,6 +89,7 @@ export const EquipmentCard = ({ equipment, onEdit }: EquipmentCardProps) => { //
             <Button
               variant="ghost"
               size="sm"
+              disabled={deleting}
               onClick={() => handleEdit(equipment)}
               className="h-8 w-8 p-0"
             >
@@ -86,10 +98,11 @@ export const EquipmentCard = ({ equipment, onEdit }: EquipmentCardProps) => { //
             <Button
               variant="ghost"
               size="sm"
+              loading={deleting}
               onClick={() => handleDelete(equipment.id)}
               className="h-8 w-8 p-0 text-destructive hover:text-destructive"
             >
-              <Trash2 className="h-4 w-4" />
+              {!deleting && <Trash2 className="h-4 w-4" />}
             </Button>
           </div>
         </div>
@@ -98,7 +111,9 @@ export const EquipmentCard = ({ equipment, onEdit }: EquipmentCardProps) => { //
       <CardContent className="space-y-4">
         {/* Equipment Image */}
         <div className="aspect-video w-full bg-muted rounded-md overflow-hidden">
-          {imageUrl && !imageError ? (
+          {imageLoading ? (
+            <Skeleton className="h-full w-full rounded-none" />
+          ) : imageUrl && !imageError ? (
             <img
               src={imageUrl}
               alt={equipment.name}

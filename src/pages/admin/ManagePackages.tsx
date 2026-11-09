@@ -17,10 +17,18 @@ import { scheduleService } from '@/services/scheduleService';
 import type { Package, Schedule } from "@/context/PackageContext";
 import { CardGridSkeleton } from '@/components/ui/loading';
 import { Skeleton } from '@/components/ui/skeleton';
+import { usePending } from '@/hooks/use-pending';
+import { usePagedPackages } from '@/hooks/use-paged-packages';
+import { Pager } from '@/components/ui/pager';
 
 export default function ManagePackages() {
   const { trainers } = useTrainers();
-  const { packages, loading: packagesLoading, setPackages, getAllGymPackages } = usePackages();
+  const personal = usePagedPackages('PERSONAL');
+  const group = usePagedPackages('GROUP');
+  const reloadAll = () => {
+    personal.reload();
+    group.reload();
+  };
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingPackage, setEditingPackage] = useState<Package | null>(null);
@@ -41,7 +49,6 @@ export default function ManagePackages() {
 
   useEffect(() => {
     // Fetch available trainers when component mounts
-    getAllGymPackages();
     getAvailableTrainers();
   }, []);
 
@@ -85,6 +92,8 @@ export default function ManagePackages() {
     return end.toISOString().split('T')[0];
   };
 
+  const pending = usePending();
+
   const handleAddPackage = async () => {
     if (!newPackage.name || !newPackage.price || !newPackage.duration || !newPackage.trainerId || !newPackage.startDate || !newPackage.gymPackageType) {
       alert('Please complete all required fields.');
@@ -101,7 +110,6 @@ export default function ManagePackages() {
       // ✅ Call backend API
       const createdPackage = await gymPackageService.createGymPackage(packageData);
 
-      setPackages([...packages, createdPackage?.data?.Package]);
 
 
       const assignTrainer = async () => {
@@ -113,7 +121,6 @@ export default function ManagePackages() {
               gymPackageId: createdPackage?.data?.Package?.id
             });
 
-            setPackages([...packages, data]);  // Also correct here
 
           } else {
             console.warn("Package ID is undefined. Skipping trainer assignment.");
@@ -140,7 +147,6 @@ export default function ManagePackages() {
 
         const data = await scheduleService.createBulkSchedules(bulkScheduleRequest);
 
-        setPackages([...packages, data]);
       }
 
       resetForm();
@@ -150,7 +156,7 @@ export default function ManagePackages() {
       console.error("Failed to create package:", error);
       alert(error.message || "Failed to create package.");
     }
-    getAllGymPackages();
+    reloadAll();
     getAvailableTrainers();
   };
 
@@ -210,11 +216,7 @@ export default function ManagePackages() {
         }
       }
 
-      // 3️⃣ Update frontend state
-      if (updatedPackage) {
-        setPackages(packages.map((p: Package) => p.id === editingPackage.id ? { ...updatedPackage, schedules } : p));
-      }
-
+      // 3️⃣ The lists reload at the end of this handler, so there is no local state to patch.
       alert(response?.message || "Package updated successfully.");
       resetForm();
       setIsDialogOpen(false);
@@ -224,7 +226,7 @@ export default function ManagePackages() {
       alert(error.message || "Failed to update package.");
     }
 
-    getAllGymPackages();
+    reloadAll();
     getAvailableTrainers();
   };
 
@@ -267,14 +269,13 @@ export default function ManagePackages() {
 
     try {
       await gymPackageService.deleteGymPackage(id);
-      setPackages(packages.filter((pkg: Package) => pkg.id !== id));
       alert("Package deleted successfully.");
     } catch (error) {
       console.error("Failed to delete package:", error);
       alert(error.message || "Failed to delete package.");
     }
 
-    getAllGymPackages();
+    reloadAll();
     getAvailableTrainers();
   };
 
@@ -307,8 +308,6 @@ export default function ManagePackages() {
     setSchedule(prev => prev.map(s => s.day === day ? { ...s, [field]: value } : s));
   };
 
-  const personalPackages = packages.filter((p: Package) => p.gymPackageType === 'PERSONAL');
-  const groupPackages = packages.filter((p: Package) => p.gymPackageType === 'GROUP');
 
   return (
     <div className="space-y-6 p-3 sm:p-6 bg-background text-foreground min-h-screen">
@@ -492,7 +491,7 @@ export default function ManagePackages() {
                 <Button onClick={() => setStep(2)} variant="secondary">Back</Button>
                 <div className="flex space-x-2">
                   <Button onClick={() => { setIsDialogOpen(false); resetForm(); }} variant="secondary">Cancel</Button>
-                  <Button onClick={editingPackage ? handleUpdatePackage : handleAddPackage} variant="default">
+                  <Button onClick={() => pending.run('save', editingPackage ? handleUpdatePackage : handleAddPackage)} loading={pending.isPending('save')} variant="default">
                     {editingPackage ? 'Update Package' : 'Save Package'}
                   </Button>
                 </div>
@@ -510,7 +509,7 @@ export default function ManagePackages() {
             <Users className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            {packagesLoading && packages.length === 0 ? <Skeleton className="h-8 w-10" /> : <div className="text-2xl font-bold">{personalPackages.length}</div>}
+            {personal.loading && personal.items.length === 0 ? <Skeleton className="h-8 w-10" /> : <div className="text-2xl font-bold">{personal.totalItems}</div>}
             <p className="text-xs text-muted-foreground">Packages</p>
           </CardContent>
         </Card>
@@ -520,7 +519,7 @@ export default function ManagePackages() {
             {/* <Package className="h-5 w-5 text-muted-foreground" /> */}
           </CardHeader>
           <CardContent>
-            {packagesLoading && packages.length === 0 ? <Skeleton className="h-8 w-10" /> : <div className="text-2xl font-bold">{groupPackages.length}</div>}
+            {group.loading && group.items.length === 0 ? <Skeleton className="h-8 w-10" /> : <div className="text-2xl font-bold">{group.totalItems}</div>}
             <p className="text-xs text-muted-foreground">Packages</p>
           </CardContent>
         </Card>
@@ -533,14 +532,16 @@ export default function ManagePackages() {
           <TabsTrigger value="group" className="data-[state=active]:bg-green-500 data-[state=active]:text-white">Group Session Packages</TabsTrigger>
         </TabsList>
         <TabsContent value="personal">
-          {packagesLoading && packages.length === 0
+          {personal.loading && personal.items.length === 0
             ? <CardGridSkeleton count={4} className="mt-4 lg:grid-cols-2" />
-            : <PackageList packages={personalPackages} onEdit={handleEditPackage} onRemove={handleRemovePackage} />}
+            : <PackageList packages={personal.items} onEdit={handleEditPackage} onRemove={(id, status) => pending.run(id, () => handleRemovePackage(id, status))} busy={pending.isPending} dimmed={personal.loading} />}
+          <Pager page={personal.page} totalPages={personal.totalPages} totalItems={personal.totalItems} pageSize={personal.pageSize} onPageChange={personal.setPage} disabled={personal.loading} noun="packages" />
         </TabsContent>
         <TabsContent value="group">
-          {packagesLoading && packages.length === 0
+          {group.loading && group.items.length === 0
             ? <CardGridSkeleton count={4} className="mt-4 lg:grid-cols-2" />
-            : <PackageList packages={groupPackages} onEdit={handleEditPackage} onRemove={handleRemovePackage} />}
+            : <PackageList packages={group.items} onEdit={handleEditPackage} onRemove={(id, status) => pending.run(id, () => handleRemovePackage(id, status))} busy={pending.isPending} dimmed={group.loading} />}
+          <Pager page={group.page} totalPages={group.totalPages} totalItems={group.totalItems} pageSize={group.pageSize} onPageChange={group.setPage} disabled={group.loading} noun="packages" />
         </TabsContent>
       </Tabs>
     </div>
@@ -560,13 +561,15 @@ function StepDot({ label, active }: { label: string; active: boolean }) {
 }
 
 // PackageList component
-function PackageList({ packages, onEdit, onRemove }: {
+function PackageList({ packages, onEdit, onRemove, busy, dimmed }: {
   packages: Package[];
+  busy: (key: string | number) => boolean;
+  dimmed?: boolean;
   onEdit: (pkg: Package) => void;
   onRemove: (id: number, status: string) => void;
 }) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+    <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 transition-opacity ${dimmed ? "opacity-50 pointer-events-none" : ""}`}>
       {(packages ?? []).map((pkg: Package) => (
         // ✅ ADD THIS CHECK HERE
         pkg.gymPackageType &&
@@ -579,8 +582,8 @@ function PackageList({ packages, onEdit, onRemove }: {
             </div>
             <div className="flex space-x-2">
               <Button variant="outline" size="sm" onClick={() => onEdit(pkg)}><Edit className="h-4 w-4" /></Button>
-              <Button variant="destructive" size="sm" onClick={() => onRemove(pkg.id, pkg.status)}>
-                <Trash2 className="h-4 w-4" />
+              <Button variant="destructive" size="sm" loading={busy(pkg.id)} onClick={() => onRemove(pkg.id, pkg.status)}>
+                {!busy(pkg.id) && <Trash2 className="h-4 w-4" />}
               </Button>
             </div>
           </div>

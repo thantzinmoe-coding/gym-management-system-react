@@ -18,6 +18,7 @@ import { Mail as MailIcon, Phone as PhoneIcon } from 'lucide-react';
 import Cookies from 'js-cookie';
 import { CardGridSkeleton } from '@/components/ui/loading';
 import { initials, displayName, matches } from '@/lib/text';
+import { imageFetchInit } from '@/lib/imageAuth';
 
 // Define an interface for the trainer data we'll display, including rating
 // This extends the existing TrainerResponseDto to add rating information
@@ -50,9 +51,7 @@ export default function ViewTrainers() {
       for (const trainer of trainers) {
         if (trainer.avatarUrl) {
           try {
-            const res = await fetch(trainer.avatarUrl, {
-              headers: { Authorization: `Bearer ${token}` },
-            });
+            const res = await fetch(trainer.avatarUrl, imageFetchInit(trainer.avatarUrl, token));
             if (res.ok) {
               const blob = await res.blob();
               newImages[trainer.id] = URL.createObjectURL(blob);

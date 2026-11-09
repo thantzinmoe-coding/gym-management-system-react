@@ -12,6 +12,7 @@ import { authService } from '@/services/authService';
 import Cookies from 'js-cookie';
 import { PageHeaderSkeleton, FormSkeleton } from '@/components/ui/loading';
 import { initials, displayName, matches } from '@/lib/text';
+import { imageFetchInit } from '@/lib/imageAuth';
 
 export default function ManageTrainerProfile() {
   const { toast } = useToast();
@@ -52,11 +53,7 @@ export default function ManageTrainerProfile() {
 
           if (userProfile.profilePic) {
             const token = Cookies.get('token'); // make sure you have this
-            const response = await fetch(`${userProfile.profilePic}`, {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            });
+            const response = await fetch(`${userProfile.profilePic}`, imageFetchInit(`${userProfile.profilePic}`, token));
             if (response.ok) {
               const blob = await response.blob();
               setProfilePhotoUrl(URL.createObjectURL(blob));

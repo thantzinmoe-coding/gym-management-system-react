@@ -8,6 +8,8 @@ import { Upload, X } from "lucide-react";
 import { useEquipments, Equipment, EquipmentFormData } from "@/context/EquipmentContext";
 import { useNavigate } from 'react-router-dom'; // Import useNavigate
 import Cookies from "js-cookie";
+import { imageFetchInit } from '@/lib/imageAuth';
+import { toast } from "sonner";
 
 interface EquipmentFormProps {
   equipment?: Equipment;
@@ -33,11 +35,7 @@ export const EquipmentForm = ({ equipment, onCancel }: EquipmentFormProps) => {
       if (equipment?.imageUrl) {
         try {
           const token = Cookies.get("token");
-          const response = await fetch(equipment.imageUrl, {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          });
+          const response = await fetch(equipment.imageUrl, imageFetchInit(equipment.imageUrl, token));
           if (response.ok) {
             const blob = await response.blob();
             setPreviewUrl(URL.createObjectURL(blob));
@@ -82,8 +80,11 @@ export const EquipmentForm = ({ equipment, onCancel }: EquipmentFormProps) => {
     fileInputRef.current?.click();
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [saving, setSaving] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (saving) return;
 
     const data: EquipmentFormData = {
       ...formData,
@@ -91,13 +92,20 @@ export const EquipmentForm = ({ equipment, onCancel }: EquipmentFormProps) => {
       equipmentCondition: formData.equipmentCondition as EquipmentFormData["equipmentCondition"],
     };
 
-    if (equipment) {
-      updateEquipment(equipment.id, data);
-    } else {
-      addEquipment(data);
+    setSaving(true);
+    try {
+      if (equipment) {
+        await updateEquipment(equipment.id, data);
+      } else {
+        await addEquipment(data);
+      }
+      toast.success(equipment ? "Equipment updated successfully" : "Equipment added successfully");
+      onCancel();
+    } catch (error) {
+      toast.error((error as Error)?.message || "Could not save the equipment. Please try again.");
+    } finally {
+      setSaving(false);
     }
-
-    onCancel();
   };
 
 
@@ -227,10 +235,10 @@ export const EquipmentForm = ({ equipment, onCancel }: EquipmentFormProps) => {
 
             {/* Form Actions */}
             <div className="flex gap-2 pt-4">
-              <Button type="button" variant="outline" onClick={onCancel} className="flex-1">
+              <Button type="button" variant="outline" onClick={onCancel} disabled={saving} className="flex-1">
                 Cancel
               </Button>
-              <Button type="submit" className="flex-1">
+              <Button type="submit" loading={saving} className="flex-1">
                 {equipment ? "Update" : "Add"} Equipment
               </Button>
             </div>

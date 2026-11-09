@@ -3,9 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useNotifications } from "@/context/NotificationContext";
 import { ListSkeleton } from '@/components/ui/loading';
+import { usePending } from '@/hooks/use-pending';
 
 export default function ViewNotifications() {
   const { notifications, markAllAsRead, loading } = useNotifications();
+  const pending = usePending();
   const [expandedIds, setExpandedIds] = useState([]);
   const hasUnread = notifications.some(n => !n.isRead);
 
@@ -30,10 +32,11 @@ export default function ViewNotifications() {
             <span>Review notifications for your role</span>
             {hasUnread && (
               <button
-                onClick={() => markAllAsRead()}
-                className="text-sm text-blue-600 hover:text-blue-800 hover:underline font-medium"
+                disabled={pending.isPending('all')}
+                onClick={() => pending.run('all', () => markAllAsRead())}
+                className="text-sm text-blue-600 hover:text-blue-800 hover:underline font-medium disabled:opacity-60 disabled:animate-pulse"
               >
-                Mark All as Read
+                {pending.isPending('all') ? 'Marking…' : 'Mark All as Read'}
               </button>
             )}
           </CardDescription>

@@ -14,6 +14,7 @@ import { AttendanceType } from '@/services/attendanceService';
 import { ListSkeleton } from '@/components/ui/loading';
 import { initials, displayName } from '@/lib/text';
 import { Pager } from '@/components/ui/pager';
+import { usePending } from '@/hooks/use-pending';
 
 type AttendanceStatus = 'ACTIVE' | 'INACTIVE';
 
@@ -122,6 +123,8 @@ export default function ManageAttendance() {
             toast.error(error.message || "Failed to fetch users");
         }
     };
+
+    const pending = usePending();
 
     const handleAddRecord = async () => {
         // Absent: person and date. Present: also the check-in time.
@@ -384,7 +387,7 @@ export default function ManageAttendance() {
                                     </>
                                 )}
 
-                                <Button onClick={editingRecord ? handleUpdateRecord : handleAddRecord} className="w-full">
+                                <Button onClick={() => pending.run('save', editingRecord ? handleUpdateRecord : handleAddRecord)} loading={pending.isPending('save')} className="w-full">
                                     {editingRecord ? 'Update' : 'Add'} Record
                                 </Button>
                             </div>
@@ -449,8 +452,8 @@ export default function ManageAttendance() {
                                     >
                                         <Edit className="h-4 w-4" />
                                     </Button>
-                                    <Button variant="outline" size="sm" onClick={() => handleDelete(record.id)}>
-                                        <Trash2 className="h-4 w-4" />
+                                    <Button variant="outline" size="sm" loading={pending.isPending(`del-${record.id}`)} onClick={() => pending.run(`del-${record.id}`, () => handleDelete(record.id))}>
+                                        {!pending.isPending(`del-${record.id}`) && <Trash2 className="h-4 w-4" />}
                                     </Button>
                                 </div>
                             </div>

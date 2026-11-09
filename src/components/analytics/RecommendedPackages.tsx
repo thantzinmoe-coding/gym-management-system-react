@@ -3,9 +3,10 @@ import { Sparkles, Calendar, User } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { analyticsService, type PackageRecommendation } from '@/services/analyticsService';
+import { usePending } from '@/hooks/use-pending';
 
 interface Props {
-  onBook: (packageId: number) => void;
+  onBook: (packageId: number) => void | Promise<void>;
   disabled?: boolean;
 }
 
@@ -13,6 +14,7 @@ interface Props {
  *  so the booking page keeps working when the analytics service is down. */
 export function RecommendedPackages({ onBook, disabled }: Props) {
   const [recs, setRecs] = useState<PackageRecommendation[] | null>(null);
+  const pending = usePending();
 
   useEffect(() => {
     analyticsService
@@ -53,7 +55,7 @@ export function RecommendedPackages({ onBook, disabled }: Props) {
             </ul>
             <div className="mt-4 flex items-center justify-between">
               <span className="text-lg font-bold tabular-nums">${r.price.toFixed(0)}</span>
-              <Button size="sm" disabled={disabled} onClick={() => onBook(r.package_id)}>
+              <Button size="sm" disabled={disabled} loading={pending.isPending(r.package_id)} onClick={() => pending.run(r.package_id, async () => { await onBook(r.package_id); })}>
                 Book
               </Button>
             </div>

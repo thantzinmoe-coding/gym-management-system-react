@@ -10,6 +10,7 @@ import { Send, Bell, Clock, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNotifications } from "@/context/NotificationContext";
 import { notificationService } from "@/services/notificationService";
+import { usePending } from '@/hooks/use-pending';
 
 export default function SendNotifications() {
   const { toast } = useToast();
@@ -19,6 +20,8 @@ export default function SendNotifications() {
     title: string;
     message: string;
   }>({ title: "", message: "" });
+
+  const pending = usePending();
 
   const handleSendNotification = async () => {
     if (!notification.title || !notification.message) {
@@ -87,8 +90,8 @@ export default function SendNotifications() {
             </div>
 
 
-            <Button onClick={handleSendNotification} className="w-full">
-              <Send className="h-4 w-4 mr-2" />
+            <Button onClick={() => pending.run('send', handleSendNotification)} loading={pending.isPending('send')} className="w-full">
+              {!pending.isPending('send') && <Send className="h-4 w-4 mr-2" />}
               Send Notification
             </Button>
           </CardContent>

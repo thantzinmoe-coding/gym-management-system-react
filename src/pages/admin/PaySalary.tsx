@@ -30,6 +30,8 @@ import { salaryService } from "@/services/salaryService";
 import Cookies from "js-cookie";
 import { ListSkeleton } from '@/components/ui/loading';
 import { initials, displayName, matches } from '@/lib/text';
+import { usePending } from '@/hooks/use-pending';
+import { imageFetchInit } from '@/lib/imageAuth';
 
 // A salary record as returned by the backend.
 interface SalaryRecord {
@@ -93,11 +95,7 @@ export default function PaySalary() {
         trainers.map(async (trainer) => {
           if (trainer.avatarUrl && !avatarUrls[trainer.id]) {
             try {
-              const response = await fetch(trainer.avatarUrl, {
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                },
-              });
+              const response = await fetch(trainer.avatarUrl, imageFetchInit(trainer.avatarUrl, token));
               if (response.ok) {
                 const blob = await response.blob();
                 newAvatars[trainer.id] = URL.createObjectURL(blob);
@@ -160,6 +158,8 @@ export default function PaySalary() {
   };
 
   // MODIFIED: Handle payment by UPDATING the existing pending record
+  const pending = usePending();
+
   const handlePaySalary = async () => {
     if (!selectedTrainer) return;
 
@@ -343,7 +343,7 @@ export default function PaySalary() {
                           {selectedTrainer && (
                             <div className="space-y-4">
                               <p>You are about to pay <strong>${calculateSalary(selectedTrainer).toLocaleString()}</strong> to <strong>{selectedTrainer.name}</strong>.</p>
-                              <Button onClick={handlePaySalary} className="w-full">
+                              <Button onClick={() => pending.run('pay', handlePaySalary)} loading={pending.isPending('pay')} className="w-full">
                                 Confirm Payment
                               </Button>
                             </div>

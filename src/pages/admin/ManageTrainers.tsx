@@ -30,6 +30,8 @@ import { manageUserService } from '@/services/manageUserService';
 import { ListSkeleton } from '@/components/ui/loading';
 import { Skeleton } from '@/components/ui/skeleton';
 import { initials, displayName, matches } from '@/lib/text';
+import { usePending } from '@/hooks/use-pending';
+import { imageFetchInit } from '@/lib/imageAuth';
 
 interface TrainerResponseDto {
   id: number;
@@ -89,11 +91,7 @@ export default function ManageTrainers() {
           // Only fetch if avatarUrl exists and is not already a blob URL
           if (trainer.avatarUrl && !trainer.avatarUrl.startsWith('blob:')) {
             try {
-              const response = await fetch(trainer.avatarUrl, {
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                },
-              });
+              const response = await fetch(trainer.avatarUrl, imageFetchInit(trainer.avatarUrl, token));
               if (response.ok) {
                 const blob = await response.blob();
                 newAvatars[trainer.id] = URL.createObjectURL(blob);
@@ -127,6 +125,8 @@ export default function ManageTrainers() {
   };
 
   // Update trainer status
+  const pending = usePending();
+
   const handleUpdateTrainer = async () => {
     if (editingTrainer) {
       try {
@@ -259,9 +259,10 @@ export default function ManageTrainers() {
                   <Button
                     variant="destructive"
                     size="sm"
-                    onClick={() => handleDeleteTrainer(trainer.id, trainer.name)}
+                    loading={pending.isPending(trainer.id)}
+                    onClick={() => pending.run(trainer.id, () => handleDeleteTrainer(trainer.id, trainer.name))}
                   >
-                    🗑️
+                    {!pending.isPending(trainer.id) && '🗑️'}
                   </Button>
                 </div>
 
@@ -291,7 +292,7 @@ export default function ManageTrainers() {
                   </SelectContent>
                 </Select>
               </div>
-              <Button className="w-full" onClick={handleUpdateTrainer}>Update Status</Button>
+              <Button className="w-full" loading={pending.isPending('update')} onClick={() => pending.run('update', handleUpdateTrainer)}>Update Status</Button>
             </div>
           )}
         </DialogContent>

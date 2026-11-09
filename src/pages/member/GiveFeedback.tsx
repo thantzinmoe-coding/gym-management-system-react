@@ -11,6 +11,7 @@ import { trainerService } from '@/services/trainerService';
 import { feedbackService } from '@/services/feedbackService';
 import { authService } from '@/services/authService';
 import { PageHeaderSkeleton, PanelSkeleton } from '@/components/ui/loading';
+import { usePending } from '@/hooks/use-pending';
 
 interface Trainer {
     id: number;
@@ -51,6 +52,8 @@ export default function GiveFeedback() {
             ))}
         </div>
     );
+
+  const pending = usePending();
 
     const handleSubmitFeedback = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -196,8 +199,8 @@ export default function GiveFeedback() {
                             />
                         </div>
 
-                        <Button onClick={handleSubmitFeedback} className="w-full">
-                            <Send className="h-4 w-4 mr-2" />
+                        <Button onClick={(e) => pending.run('submit', () => handleSubmitFeedback(e))} loading={pending.isPending('submit')} className="w-full">
+                            {!pending.isPending('submit') && <Send className="h-4 w-4 mr-2" />}
                             Submit Feedback
                         </Button>
                     </CardContent>

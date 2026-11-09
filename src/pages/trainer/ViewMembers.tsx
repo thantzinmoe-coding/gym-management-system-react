@@ -12,6 +12,7 @@ import { authService } from "@/services/authService";
 import Cookies from "js-cookie";
 import { CardGridSkeleton } from '@/components/ui/loading';
 import { initials, displayName, matches } from '@/lib/text';
+import { imageFetchInit } from '@/lib/imageAuth';
 
 interface MemberHealth {
   id: number;
@@ -94,9 +95,7 @@ export default function ViewMembers() {
       for (const member of members) {
         if (member.profilePic) {
           try {
-            const res = await fetch(member.profilePic, {
-              headers: { Authorization: `Bearer ${token}` },
-            });
+            const res = await fetch(member.profilePic, imageFetchInit(member.profilePic, token));
             if (res.ok) {
               const blob = await res.blob();
               newImages[member.id] = URL.createObjectURL(blob);

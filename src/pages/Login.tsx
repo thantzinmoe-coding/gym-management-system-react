@@ -32,6 +32,19 @@ export default function Login() {
     try {
       const response = await authService.login(email, password);
 
+      if (response?.success && response.data?.profileComplete === false) {
+        // Verified the e-mail earlier but never finished the profile: continue where they stopped.
+        const pendingRole = String(response.data.roleName || '').toLowerCase();
+        toast({
+          title: "Finish setting up your profile",
+          description: "Your email is verified. Please complete your profile to continue.",
+        });
+        navigate(`/setup/${pendingRole}-profile`, {
+          state: { userId: response.data.userId, email: response.data.email, role: response.data.roleName, password },
+        });
+        return;
+      }
+
       if (response?.success) {
         const authUser = authService.getCurrentUser();
         if (authUser && authUser.role) {
